@@ -4,13 +4,13 @@ An Emacs minor mode that provides inline writing suggestions powered by an LLM. 
 
 ## Privacy warning
 
-Flywrite sends the text you are editing to the Anthropic API for analysis. Do not use flywrite-mode when editing files that contain sensitive or confidential information.
+Flywrite sends the text you are editing to an LLM API for analysis. Do not use flywrite-mode when editing files that contain sensitive or confidential information.
 
 ## Installation
 
 Requirements:
 - Emacs 27.1+
-- Anthropic API key
+- LLM API key
 
 No external Emacs packages are required — flywrite uses only built-in libraries (`url`, `json`, `flymake`, `md5`).
 
@@ -45,17 +45,18 @@ Configure with use-package
 
 ### API providers
 
-Set `flywrite-api-url` to point to a Messages API-compatible endpoint, then configure an API key (`flywrite-api-key` or `flywrite-api-key-file` or `FLYWRITE_API_KEY` environment variable).
+Set `flywrite-api-url` to point to a Messages API-compatible endpoint, then configure an API key (`flywrite-api-key` or `flywrite-api-key-file` or `FLYWRITE_API_KEY` environment variable).  By default, the key is sent as a `Bearer` token in the `Authorization` header.  Use `flywrite-api-headers` for provider-specific headers.
 
 **Anthropic**
 1. `(setq flywrite-api-url "https://api.anthropic.com/v1/messages")`
-2. Get an API key at https://console.anthropic.com/settings/keys
-3. Add credits at https://platform.claude.com/settings/billing
+2. `(setq flywrite-api-headers '(("x-api-key" . "YOUR-KEY") ("anthropic-version" . "2023-06-01")))`
+3. Get an API key at https://console.anthropic.com/settings/keys
+4. Add credits at https://platform.claude.com/settings/billing
 
 **OpenAI**
 1. `(setq flywrite-api-url "https://api.openai.com/v1/messages")`
-2. Get an API key at https://console.anthropic.com/settings/keys
-3. Add credits at https://platform.claude.com/settings/billing
+2. Get an API key at https://platform.openai.com/api-keys
+3. Add credits at https://platform.openai.com/settings/organization/billing/overview
 
 **Google Gemini**
 1. `(setq flywrite-api-url "https://generativelanguage.googleapis.com/v1/messages")`

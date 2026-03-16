@@ -13,7 +13,7 @@
 ;;; Commentary:
 
 ;; flywrite-mode is a minor mode that provides inline writing suggestions
-;; powered by the Anthropic LLM API.  Suggestions appear as flymake
+;; powered by an LLM API.  Suggestions appear as flymake
 ;; diagnostics (wavy underlines) with explanations via flymake-popon or
 ;; the echo area.  The UX goal is unobtrusive, always-on feedback — like
 ;; Flyspell but for style and clarity, built on flymake.
@@ -34,7 +34,7 @@
   :prefix "flywrite-")
 
 (defcustom flywrite-api-key nil
-  "Anthropic API key.
+  "API key for the LLM provider.
 Falls back to `flywrite-api-key-file', then the FLYWRITE_API_KEY
 environment variable."
   :type '(choice (const :tag "Use file or env var" nil)
@@ -42,7 +42,7 @@ environment variable."
   :group 'flywrite)
 
 (defcustom flywrite-api-key-file nil
-  "Path to a file containing the Anthropic API key.
+  "Path to a file containing the LLM API key.
 The file should contain the key on its first line.  Leading and
 trailing whitespace is stripped.  Checked when `flywrite-api-key'
 is nil, before falling back to the FLYWRITE_API_KEY env var."
@@ -93,6 +93,17 @@ Longer units are passed through without truncation or splitting."
   :type '(repeat symbol)
   :group 'flywrite)
 
+(defcustom flywrite-api-headers nil
+  "Extra HTTP headers to include in API requests.
+An alist of (HEADER-NAME . VALUE) pairs.  These are merged with
+the default Content-Type and Authorization headers.
+
+Example for Anthropic:
+  \\='((\"x-api-key\" . \"sk-ant-...\")
+    (\"anthropic-version\" . \"2023-06-01\"))"
+  :type '(alist :key-type string :value-type string)
+  :group 'flywrite)
+
 (defcustom flywrite-debug nil
   "When non-nil, log API calls, responses, and events to `*flywrite-log*'."
   :type 'boolean
@@ -124,7 +135,7 @@ Longer units are passed through without truncation or splitting."
 ;;;; ---- Constants ----
 
 (defcustom flywrite-api-url nil
-  "Anthropic Messages API endpoint.
+  "LLM API endpoint URL.
 If nil, `flywrite-mode' will display an error asking you to
 configure it.  See the README for details."
   :type '(choice (const :tag "Not set" nil)
@@ -302,9 +313,9 @@ HASH is the content hash at time of dispatch for stale checking."
                                    (content . ,text))]))))
          (url-request-method "POST")
          (url-request-extra-headers
-          `(("Content-Type" . "application/json")
-            ("x-api-key" . ,api-key)
-            ("anthropic-version" . "2023-06-01")))
+          (append `(("Content-Type" . "application/json")
+                    ("Authorization" . ,(concat "Bearer " api-key)))
+                  flywrite-api-headers))
          (url-request-data (encode-coding-string payload 'utf-8))
          (start-time (current-time)))
     (flywrite--log "API call: [%d-%d] text=%.40s hash=%s"

@@ -127,7 +127,7 @@ This prevents a large buffer check or a burst of edits from flooding the API wit
 
 Each request targets a single sentence. The call is made asynchronously via `url-retrieve`.
 
-**Endpoint:** `https://api.anthropic.com/v1/messages`
+**Endpoint:** configurable via `flywrite-api-url`
 
 **Request structure:**
 

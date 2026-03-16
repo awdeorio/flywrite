@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-flywrite-mode is an Emacs minor mode that provides inline writing suggestions powered by the Anthropic LLM API. Suggestions appear as flymake diagnostics (wavy underlines) with explanations via flymake-popon or the echo area. The UX goal is unobtrusive, always-on feedback (like Flyspell but for style/clarity, built on flymake).
+flywrite-mode is an Emacs minor mode that provides inline writing suggestions powered by an LLM API. Suggestions appear as flymake diagnostics (wavy underlines) with explanations via flymake-popon or the echo area. The UX goal is unobtrusive, always-on feedback (like Flyspell but for style/clarity, built on flymake).
 
 The entire package lives in a single file: `flywrite-mode.el`. The design spec is in `spec.md`. Test files in `tests/` are used for manual testing in Emacs.
 
@@ -22,11 +22,11 @@ This is a pure Emacs Lisp package with no build system, no external dependencies
 emacs -Q --batch -f batch-byte-compile flywrite-mode.el
 ```
 
-**Requires:** Emacs 27.1+, an Anthropic API key (via `flywrite-api-key`, `flywrite-api-key-file`, or `FLYWRITE_API_KEY` env var).
+**Requires:** Emacs 27.1+, an LLM API key (via `flywrite-api-key`, `flywrite-api-key-file`, or `FLYWRITE_API_KEY` env var).
 
 ## Architecture
 
-The pipeline: buffer edits → `after-change-functions` → dirty sentence registry (deduplicated by MD5 hash) → idle timer (1.5s) → request queue (max 3 concurrent) → async `url-retrieve` to Anthropic Messages API → response handler (stale-check via hash comparison) → flymake diagnostics (`:note` severity).
+The pipeline: buffer edits → `after-change-functions` → dirty sentence registry (deduplicated by MD5 hash) → idle timer (1.5s) → request queue (max 3 concurrent) → async `url-retrieve` to LLM API → response handler (stale-check via hash comparison) → flymake diagnostics (`:note` severity).
 
 Key design decisions:
 - **Sentence-level granularity** by default (paragraph via `flywrite-granularity`)
