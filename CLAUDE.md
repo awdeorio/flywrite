@@ -17,12 +17,12 @@ This is a pure Emacs Lisp package with no build system, no external dependencies
 (load-file "/path/to/flywrite-mode.el")
 ```
 
-**Byte-compile** (optional):
+**Byte-compile check** (catches warnings and errors without running Emacs interactively):
 ```bash
 emacs -Q --batch -f batch-byte-compile flywrite-mode.el
 ```
 
-**Requires:** Emacs 27.1+, an LLM API key (via `flywrite-api-key`, `flywrite-api-key-file`, or `FLYWRITE_API_KEY` env var).
+**Requires:** Emacs 27.1+, an LLM API key (via `flywrite-api-key-file` (recommended), `flywrite-api-key`, or `FLYWRITE_API_KEY` env var).
 
 ## Architecture
 
@@ -35,6 +35,7 @@ Key design decisions:
 - **Flymake backend**: `flywrite-flymake` registered in `flymake-diagnostic-functions`; handles eglot coexistence by re-adding itself via `eglot-managed-mode-hook`
 - **Prompt caching**: system prompt uses `cache_control` with `"type": "ephemeral"` for cost reduction
 - **Mode-aware suppression**: skips code blocks, comments, and other non-prose regions via font-lock face inspection
+- **Multi-provider support**: Anthropic endpoints are auto-detected (use `x-api-key` header); all others use `Bearer` token in `Authorization` header
 
 ## Emacs Lisp Conventions
 
