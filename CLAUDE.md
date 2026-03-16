@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 flywrite-mode is an Emacs minor mode that provides inline writing suggestions powered by the Anthropic LLM API. Suggestions appear as flymake diagnostics (wavy underlines) with explanations via flymake-popon or the echo area. The UX goal is unobtrusive, always-on feedback (like Flyspell but for style/clarity, built on flymake).
 
-The entire package lives in a single file: `flywrite-mode.el`. The design spec is in `plan.md`. Test files (`test01.md`, `test02.tex`) are used for manual testing in Emacs.
+The entire package lives in a single file: `flywrite-mode.el`. The design spec is in `spec.md`. Test files in `tests/` are used for manual testing in Emacs.
 
 ## Development
 
