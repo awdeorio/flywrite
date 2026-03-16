@@ -287,6 +287,11 @@ the FLYWRITE_API_KEY environment variable."
       (getenv "FLYWRITE_API_KEY")
       (error "No API key: set `flywrite-api-key', `flywrite-api-key-file', or FLYWRITE_API_KEY env var")))
 
+(defun flywrite--anthropic-api-p ()
+  "Return non-nil if `flywrite-api-url' points to the Anthropic API."
+  (and flywrite-api-url
+       (string-match-p "api\\.anthropic\\.com" flywrite-api-url)))
+
 (defun flywrite--send-request (buf beg end hash)
   "Send an API request for the text in BUF between BEG and END.
 HASH is the content hash at time of dispatch for stale checking."
@@ -300,21 +305,32 @@ HASH is the content hash at time of dispatch for stale checking."
     (let* ((text (with-current-buffer buf
                    (buffer-substring-no-properties beg end)))
          (api-key (flywrite--get-api-key))
-         (system-msg (if flywrite-enable-caching
+         (anthropic-p (flywrite--anthropic-api-p))
+         (system-msg (if (and anthropic-p flywrite-enable-caching)
                          `[((type . "text")
                             (text . ,flywrite-system-prompt)
                             (cache_control . ((type . "ephemeral"))))]
                        flywrite-system-prompt))
          (payload (json-encode
-                   `((model . ,flywrite-model)
-                     (max_tokens . 300)
-                     (system . ,system-msg)
-                     (messages . [((role . "user")
-                                   (content . ,text))]))))
+                   (if anthropic-p
+                       `((model . ,flywrite-model)
+                         (max_tokens . 300)
+                         (system . ,system-msg)
+                         (messages . [((role . "user")
+                                       (content . ,text))]))
+                     `((model . ,flywrite-model)
+                       (max_tokens . 300)
+                       (messages . [((role . "system")
+                                     (content . ,flywrite-system-prompt))
+                                    ((role . "user")
+                                     (content . ,text))])))))
          (url-request-method "POST")
          (url-request-extra-headers
           (append `(("Content-Type" . "application/json")
-                    ("Authorization" . ,(concat "Bearer " api-key)))
+                    ,@(if anthropic-p
+                          `(("x-api-key" . ,api-key)
+                            ("anthropic-version" . "2023-06-01"))
+                        `(("Authorization" . ,(concat "Bearer " api-key)))))
                   flywrite-api-headers))
          (url-request-data (encode-coding-string payload 'utf-8))
          (start-time (current-time)))
@@ -352,11 +368,21 @@ request.  START-TIME is used for latency logging."
                 (error "Malformed HTTP response"))
 
               ;; Parse JSON body (json-read returns alists with symbol keys)
+              ;; Anthropic: {content: [{type:"text", text:"..."}]}
+              ;; OpenAI:    {choices: [{message: {content: "..."}}]}
               (let* ((json-data (json-read))
-                     (content (alist-get 'content json-data))
-                     (text-block (and (arrayp content) (> (length content) 0)
-                                      (aref content 0)))
-                     (text (and text-block (alist-get 'text text-block))))
+                     (text (if (flywrite--anthropic-api-p)
+                               (let* ((content (alist-get 'content json-data))
+                                      (text-block (and (arrayp content)
+                                                       (> (length content) 0)
+                                                       (aref content 0))))
+                                 (and text-block (alist-get 'text text-block)))
+                             (let* ((choices (alist-get 'choices json-data))
+                                    (choice (and (arrayp choices)
+                                                 (> (length choices) 0)
+                                                 (aref choices 0)))
+                                    (message (and choice (alist-get 'message choice))))
+                               (and message (alist-get 'content message))))))
 
                 (flywrite--log "Response: %.2fs hash=%s" latency (substring hash 0 8))
 
