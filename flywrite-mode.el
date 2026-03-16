@@ -163,7 +163,8 @@ Rules:
 - \"quote\" must be an exact substring of the input
 - Keep reasons under 12 words
 - One entry per distinct issue
-- Do not flag correct sentences"
+- Do not flag correct sentences
+- Ignore markup and formatting commands (LaTeX, HTML, Org-mode, etc.) -- only evaluate the prose content"
   "System prompt sent with every API call.
 The prompt must instruct the model to return JSON with a
 \"suggestions\" array.  Each element needs \"quote\" and \"reason\"
@@ -228,20 +229,6 @@ Matches LaTeX commands like \\=\\cmd, \\=\\cmd{arg}, \\=\\begin{env}, etc."
     (string-match-p
      "\\`\\\\[a-zA-Z@]+\\(?:\\[[^]]*\\]\\)*\\(?:{[^}]*}\\)*\\s-*\\'"
      text)))
-
-(defun flywrite--strip-latex-markup (text)
-  "Strip LaTeX commands from TEXT, leaving only prose content.
-Removes \\=\\command, \\=\\command{arg}, \\=\\command[opt]{arg} patterns."
-  (let ((result text))
-    ;; Remove \command[optional]{arg} and \command{arg} patterns
-    (setq result (replace-regexp-in-string
-                  "\\\\[a-zA-Z@]+\\(?:\\[[^]]*\\]\\)*\\(?:{[^}]*}\\)*"
-                  "" result))
-    ;; Clean up extra whitespace left behind
-    (setq result (replace-regexp-in-string "\\`[ \t\n]+" "" result))
-    (setq result (replace-regexp-in-string "[ \t\n]+\\'" "" result))
-    (setq result (replace-regexp-in-string "[ \t]+" " " result))
-    result))
 
 (defun flywrite--should-skip-p (pos)
   "Return non-nil if text at POS should be skipped.
@@ -339,13 +326,9 @@ HASH is the content hash at time of dispatch for stale checking."
     (unless flywrite-api-url
       (flywrite--log "ERROR: flywrite-api-url is not set")
       (error "flywrite-api-url is not set.  See the README for configuration"))
-    (let* ((raw-text (with-current-buffer buf
-                      (buffer-substring-no-properties beg end)))
-         (text (if (with-current-buffer buf
-                     (derived-mode-p 'latex-mode 'LaTeX-mode 'tex-mode))
-                   (flywrite--strip-latex-markup raw-text)
-                 raw-text))
-         (api-key (flywrite--get-api-key))
+    (let* ((text (with-current-buffer buf
+                    (buffer-substring-no-properties beg end)))
+           (api-key (flywrite--get-api-key))
          (anthropic-p (flywrite--anthropic-api-p))
          (system-msg (if (and anthropic-p flywrite-enable-caching)
                          `[((type . "text")
