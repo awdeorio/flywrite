@@ -20,6 +20,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'flymake)
 (require 'json)
 (require 'url)
@@ -319,8 +320,8 @@ request.  START-TIME is used for latency logging."
               (unless (re-search-forward "\r?\n\r?\n" nil t)
                 (error "Malformed HTTP response"))
 
-              ;; Parse JSON body
-              (let* ((json-data (json-parse-buffer :object-type 'alist))
+              ;; Parse JSON body (json-read returns alists with symbol keys)
+              (let* ((json-data (json-read))
                      (content (alist-get 'content json-data))
                      (text-block (and (arrayp content) (> (length content) 0)
                                       (aref content 0)))
