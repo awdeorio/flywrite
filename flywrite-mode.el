@@ -623,6 +623,38 @@ Prompts for confirmation when the count exceeds
                         80 nil nil t)))
       (message "flywrite: queued %d sentences for checking" count))))
 
+(defun flywrite-check-region (beg end)
+  "Queue all sentences in the region for checking.
+Prompts for confirmation when the count exceeds
+`flywrite-check-confirm-threshold'."
+  (interactive "r")
+  (unless flywrite-mode
+    (user-error "flywrite-mode is not enabled"))
+  (unless (use-region-p)
+    (user-error "No active region"))
+  (let ((units (flywrite--collect-units-in-region beg end)))
+    (when (and (> (length units) flywrite-check-confirm-threshold)
+               (not (y-or-n-p (format "Check %d sentences? " (length units)))))
+      (user-error "Cancelled"))
+    (let ((count 0))
+      (dolist (entry units)
+        ;; Remove from checked so re-checks work
+        (remhash (nth 2 entry) flywrite--checked-sentences)
+        (push entry flywrite--dirty-registry)
+        (setq count (1+ count))
+        (flywrite--log "Dirty: [%d-%d] hash=%s queue=%d text=%S"
+                       (nth 0 entry) (nth 1 entry)
+                       (substring (nth 2 entry) 0 8)
+                       (length flywrite--dirty-registry)
+                       (truncate-string-to-width
+                        (string-trim
+                         (buffer-substring-no-properties
+                          (nth 0 entry) (nth 1 entry)))
+                        80 nil nil t)))
+      (message "flywrite: queued %d sentences in region for checking" count)
+      ;; Dispatch immediately rather than waiting for idle timer
+      (flywrite--idle-timer-fn (current-buffer)))))
+
 (defun flywrite-check-at-point ()
   "Queue the sentence or paragraph at point for checking.
 Respects `flywrite-granularity'."

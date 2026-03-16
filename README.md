@@ -124,6 +124,7 @@ As you move or type, flywrite will automatically check sentences after a short i
 | Command                    | Description                      |
 |----------------------------|----------------------------------|
 | `flywrite-check-buffer`    | Check all sentences in buffer    |
+| `flywrite-check-region`    | Check all sentences in region    |
 | `flywrite-check-at-point`  | Check sentence at point          |
 | `flywrite-clear`           | Clear diagnostics and caches     |
 | `flymake-goto-next-error`  | Next diagnostic (flymake built-in) |
