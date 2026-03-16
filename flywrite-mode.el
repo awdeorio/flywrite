@@ -268,8 +268,12 @@ the ANTHROPIC_API_KEY environment variable."
 (defun flywrite--send-request (buf beg end hash)
   "Send an API request for the text in BUF between BEG and END.
 HASH is the content hash at time of dispatch for stale checking."
-  (let* ((text (with-current-buffer buf
-                 (buffer-substring-no-properties beg end)))
+  ;; Skip if already checked (catches duplicates from queue)
+  (if (with-current-buffer buf
+        (gethash hash flywrite--checked-sentences))
+      (flywrite--log "Skipping already-checked hash=%s" (substring hash 0 8))
+    (let* ((text (with-current-buffer buf
+                   (buffer-substring-no-properties beg end)))
          (api-key (flywrite--get-api-key))
          (system-msg (if flywrite-enable-caching
                          `[((type . "text")
@@ -292,12 +296,14 @@ HASH is the content hash at time of dispatch for stale checking."
     (flywrite--log "API call: [%d-%d] text=%.40s hash=%s"
                    beg end text (substring hash 0 8))
     (with-current-buffer buf
-      (cl-incf flywrite--in-flight))
+      (cl-incf flywrite--in-flight)
+      ;; Mark as checked now to prevent duplicate in-flight requests
+      (puthash hash t flywrite--checked-sentences))
     (url-retrieve
      flywrite--api-url
      (lambda (status)
        (flywrite--handle-response status buf beg end hash start-time))
-     nil t t)))
+     nil t t))))
 
 ;;;; ---- Response handler ----
 
@@ -337,6 +343,8 @@ request.  START-TIME is used for latency logging."
                             (not (string= hash (flywrite--content-hash beg end))))
                         (progn
                           (flywrite--log "Stale response discarded: [%d-%d]" beg end)
+                          ;; Remove stale hash so updated content can be checked
+                          (remhash hash flywrite--checked-sentences)
                           ;; Re-dirty so it gets re-checked
                           (let ((new-hash (when (and (<= beg (point-max))
                                                      (<= end (point-max)))
@@ -373,7 +381,8 @@ request.  START-TIME is used for latency logging."
                                     (let ((diag-beg (+ beg match-pos))
                                           (diag-end (+ beg match-pos (length quote-str))))
                                       (push (flymake-make-diagnostic
-                                             buf diag-beg diag-end :note reason)
+                                             buf diag-beg diag-end :note
+                                             (concat reason " [flywrite]"))
                                             flywrite--diagnostics)
                                       (flywrite--log "Diagnostic: [%d-%d] %s"
                                                      diag-beg diag-end reason))
@@ -386,7 +395,11 @@ request.  START-TIME is used for latency logging."
                         (error
                          (flywrite--log "JSON parse error: %s" (error-message-string parse-err)))))))))
           (error
-           (flywrite--log "Response handler error: %s" (error-message-string err))))
+           (flywrite--log "Response handler error: %s" (error-message-string err))
+           ;; Remove hash from checked so this sentence can be retried
+           (when (buffer-live-p buf)
+             (with-current-buffer buf
+               (remhash hash flywrite--checked-sentences)))))
 
       ;; Always: decrement counter and drain queue
       (when (buffer-live-p buf)
@@ -406,17 +419,20 @@ Snapshots and clears the dirty registry, dispatches or queues requests."
   (when (buffer-live-p buf)
     (with-current-buffer buf
       (when (and flywrite-mode flywrite--dirty-registry)
-        (let ((snapshot flywrite--dirty-registry))
+        (let ((snapshot flywrite--dirty-registry)
+              (seen (make-hash-table :test 'equal)))
           (setq flywrite--dirty-registry nil)
           (dolist (entry snapshot)
             (let ((beg (nth 0 entry))
                   (end (nth 1 entry))
                   (hash (nth 2 entry)))
-              ;; Re-verify bounds and skip check
+              ;; Re-verify bounds, skip check, and dedup by hash
               (when (and (<= end (point-max))
                          (>= beg (point-min))
                          (not (flywrite--should-skip-p beg))
-                         (not (gethash hash flywrite--checked-sentences)))
+                         (not (gethash hash flywrite--checked-sentences))
+                         (not (gethash hash seen)))
+                (puthash hash t seen)
                 (if (< flywrite--in-flight flywrite-max-concurrent)
                     (flywrite--send-request buf beg end hash)
                   (progn
@@ -530,17 +546,17 @@ flymake diagnostics."
   :lighter " FlyW"
   :keymap flywrite-mode-map
   :group 'flywrite
-  (if flywrite-mode
-      (flywrite--enable)
-    (flywrite--disable)))
+  (cond
+   ((not flywrite-mode)
+    (flywrite--disable))
+   (flywrite--idle-timer
+    ;; Already active — skip duplicate setup (e.g., multiple hooks firing)
+    nil)
+   (t
+    (flywrite--enable))))
 
 (defun flywrite--enable ()
   "Set up flywrite-mode in the current buffer."
-  ;; Guard against duplicate enable (e.g., multiple mode hooks firing)
-  (when flywrite--idle-timer
-    (cancel-timer flywrite--idle-timer)
-    (setq flywrite--idle-timer nil))
-
   ;; Initialize buffer-local state
   (setq flywrite--dirty-registry nil)
   (setq flywrite--checked-sentences (make-hash-table :test 'equal))

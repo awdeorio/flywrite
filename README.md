@@ -31,7 +31,7 @@ Add to your Emacs config:
   :load-path "/path/to/flywrite"
 
   ;; Optional: enable automatically for writing modes
-  :hook ((text-mode latex-mode LaTeX-mode markdown-mode org-mode) . flywrite-mode)
+  :hook ((text-mode latex-mode LaTeX-mode markdown-mode org-mode) . turn-on-flywrite-mode)
 
   ;; Set API key (choose one method):
   :config
@@ -42,6 +42,13 @@ Add to your Emacs config:
   ;; 3. Use ANTHROPIC_API_KEY environment variable (no config needed)
   )
 ```
+
+For Claude:
+1. Get an API key at https://console.anthropic.com/settings/keys
+2. Store it in ~/.anthropic_api_key or set the environment variable:
+   export ANTHROPIC_API_KEY=sk-ant-...
+3. Add credits https://platform.claude.com/settings/billing
+
 
 ## Configuration
 
