@@ -1,0 +1,15 @@
+#!/bin/bash
+# Run flywrite-mode ERT tests in batch mode.
+
+# Stop on errors, print commands
+set -Eeuo pipefail
+set -x
+
+# Run from project directory
+cd "$(dirname "$0")"
+
+# Byte-compile check
+emacs -Q --batch -f batch-byte-compile flywrite-mode.el && rm -f flywrite-mode.elc
+
+# Unit tests
+emacs -Q --batch -l flywrite-mode.el -l test-flywrite.el -f ert-run-tests-batch-and-exit

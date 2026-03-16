@@ -116,6 +116,10 @@ without needing to edit."
   :type 'boolean
   :group 'flywrite)
 
+;; Forward-declare the minor-mode variable (defined by define-minor-mode
+;; below) so the byte compiler doesn't warn about a free variable.
+(defvar flywrite-mode)
+
 ;;;; ---- Buffer-local state ----
 
 (defvar-local flywrite--dirty-registry nil
