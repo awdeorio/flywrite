@@ -4,6 +4,49 @@ An Emacs minor mode that provides inline writing suggestions powered by an LLM. 
 
 **Privacy warning:** Flywrite sends your document text to an LLM API.
 
+![flywrite-mode screenshot](screenshot.png)
+
+## Quick start
+
+Get an Anthropic API key at https://console.anthropic.com/settings/keys and save it to a file like `~.flywrite-api-key`.
+
+Add credits at https://platform.claude.com/settings/billing $5 should be more than enough.
+
+Clone.
+```bash
+git clone https://github.com/awdeorio/flywrite.git
+```
+
+Configure.
+```elisp
+(use-package flywrite-mode
+  :load-path "/path/to/flywrite"
+  :commands (flywrite-mode)
+  :config
+  ;; Required
+  (setq flywrite-api-url "https://api.anthropic.com/v1/messages")
+  (setq flywrite-api-key-file "~/.flywrite-api-key")
+
+  ;; Optional
+  (setq flywrite-debug t)                            ; log to *flywrite-log*
+  (setq flywrite-model "claude-sonnet-4-20250514"))  ; default model
+
+(use-package flymake-popon
+  :ensure t
+  :hook (flymake-mode . flymake-popon-mode))
+```
+
+Open a text file and save this content.
+```
+The quick brown fox jumpted over the lazy dog. Him and his friend went to the store to buy some grocerys. The weather was very extremely hot outside yesterday.
+```
+
+Run `M-x flywrite-mode`.  Try checking the entire buffer with `M-x flywrite-check-buffer`.  Move the point over one of the wavy underlines.
+
+![flywrite-mode screenshot](screenshot.png)
+
+Now try adding new text.  New sentences are checked after a short delay.
+
 ## Installation
 
 Requirements:
