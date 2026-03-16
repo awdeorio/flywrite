@@ -33,10 +33,10 @@ Configure with use-package
   (setq flywrite-api-url "https://api.anthropic.com/v1/messages")
 
   ;; API key (choose one method):
-  ;; 1. Set directly:
+  ;; 1. Read from a file (recommended):
+  ;; (setq flywrite-api-key-file "~/.flywrite-api-key")
+  ;; 2. Set directly:
   ;; (setq flywrite-api-key "sk-ant-...")
-  ;; 2. Read from a file:
-  ;; (setq flywrite-api-key-file "~/.anthropic_api_key")
   ;; 3. Use FLYWRITE_API_KEY environment variable (no config needed)
   )
 ```
