@@ -295,13 +295,13 @@ BEG and END are the changed region boundaries."
       (when (> (length key) 0) key))))
 
 (defun flywrite--get-api-key ()
-  "Return the API key.
+  "Return the API key, or nil if none is configured.
 Checks `flywrite-api-key', then `flywrite-api-key-file', then
-the FLYWRITE_API_KEY environment variable."
+the FLYWRITE_API_KEY environment variable.  Returns nil when no
+key is found (e.g., for local providers like Ollama)."
   (or flywrite-api-key
       (flywrite--read-api-key-file)
-      (getenv "FLYWRITE_API_KEY")
-      (error "No API key: set `flywrite-api-key', `flywrite-api-key-file', or FLYWRITE_API_KEY env var")))
+      (getenv "FLYWRITE_API_KEY")))
 
 (defun flywrite--anthropic-api-p ()
   "Return non-nil if `flywrite-api-url' points to the Anthropic API."
@@ -343,10 +343,14 @@ HASH is the content hash at time of dispatch for stale checking."
          (url-request-method "POST")
          (url-request-extra-headers
           (append `(("Content-Type" . "application/json")
-                    ,@(if anthropic-p
-                          `(("x-api-key" . ,api-key)
-                            ("anthropic-version" . "2023-06-01"))
-                        `(("Authorization" . ,(concat "Bearer " api-key)))))
+                    ,@(cond
+                       (anthropic-p
+                        (unless api-key
+                          (error "Anthropic API requires an API key"))
+                        `(("x-api-key" . ,api-key)
+                          ("anthropic-version" . "2023-06-01")))
+                       (api-key
+                        `(("Authorization" . ,(concat "Bearer " api-key))))))
                   flywrite-api-headers))
          (url-request-data (encode-coding-string payload 'utf-8))
          (start-time (current-time)))

@@ -61,7 +61,14 @@ Set `flywrite-api-url` to your provider's endpoint. Flywrite natively supports t
 2. Get an API key at https://aistudio.google.com/apikey
 3. Add credits at https://aistudio.google.com/plan_billing
 
-Anthropic endpoints are auto-detected (by hostname) and use the `x-api-key` header; all other providers use a `Bearer` token in the `Authorization` header.
+**Ollama** (local, no API key needed)
+1. Install Ollama from https://ollama.com and pull a model (e.g., `ollama pull llama3.2`)
+2. `(setq flywrite-api-url "http://localhost:11434/v1/chat/completions")`
+3. `(setq flywrite-model "llama3.2:3b")` — use any model you have pulled (check names with `ollama list`)
+
+Note: Smaller local models may struggle to consistently return valid JSON in the expected format, leading to "LLM returned invalid JSON" messages. Larger models (7B+) tend to be more reliable. Enable `flywrite-debug` and check `*flywrite-log*` to see raw responses.
+
+Anthropic endpoints are auto-detected (by hostname) and use the `x-api-key` header; all other providers use a `Bearer` token in the `Authorization` header. Local providers like Ollama work without an API key.
 
 ### API key
 Choose one method:
