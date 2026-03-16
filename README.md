@@ -4,11 +4,9 @@ An Emacs minor mode that provides inline writing suggestions powered by an LLM. 
 
 **Privacy warning:** Flywrite sends your document text to an LLM API.
 
-![flywrite-mode screenshot](screenshot.png)
-
 ## Quick start
 
-Get an Anthropic API key at https://console.anthropic.com/settings/keys and save it to a file like `~.flywrite-api-key`.
+Get an Anthropic API key at https://console.anthropic.com/settings/keys and save it to `~/.flywrite-api-key`.
 
 Add credits at https://platform.claude.com/settings/billing $5 should be more than enough.
 
@@ -48,45 +46,16 @@ Run `M-x flywrite-mode`.  Try checking the entire buffer with `M-x flywrite-chec
 Now try adding new text.  New sentences are checked after a short delay.
 
 ## Installation
-
 Requirements:
 - Emacs 27.1+
 - LLM API key
 
 No external Emacs packages are required — flywrite uses only built-in libraries (`url`, `json`, `flymake`, `md5`).
 
-Clone
-```bash
-git clone https://github.com/awdeorio/flywrite.git
-```
-
-Configure with use-package
-```elisp
-(use-package flywrite-mode
-  :load-path "/path/to/flywrite"
-
-  ;; Important for those who use (setq use-package-always-defer t)
-  :commands (flywrite-mode)
-
-  ;; Optional: enable automatically for writing modes
-  ;; :hook (text-mode . flywrite-mode)
-
-  :config
-  ;; API endpoint (required):
-  (setq flywrite-api-url "https://api.anthropic.com/v1/messages")
-
-  ;; API key (choose one method):
-  ;; 1. Read from a file (recommended):
-  ;; (setq flywrite-api-key-file "~/.flywrite-api-key")
-  ;; 2. Set directly:
-  ;; (setq flywrite-api-key "sk-ant-...")
-  ;; 3. Use FLYWRITE_API_KEY environment variable (no config needed)
-  )
-```
+See [Quick start](#quick-start) for clone and configuration instructions.
 
 ### API providers
-
-Set `flywrite-api-url` to point to a Messages API-compatible endpoint, then configure an API key (`flywrite-api-key` or `flywrite-api-key-file` or `FLYWRITE_API_KEY` environment variable).  Anthropic endpoints are auto-detected and use the `x-api-key` header; all other providers use a `Bearer` token in the `Authorization` header.
+Set `flywrite-api-url` to point to a Messages API-compatible endpoint.
 
 **Anthropic**
 1. `(setq flywrite-api-url "https://api.anthropic.com/v1/messages")`
@@ -103,18 +72,20 @@ Set `flywrite-api-url` to point to a Messages API-compatible endpoint, then conf
 2. Get an API key at https://aistudio.google.com/apikey
 3. Add credits at https://aistudio.google.com/plan_billing
 
-## Popup explanations
-For the best experience, install [flymake-popon](https://github.com/akicho8/flymake-popon) to see suggestion explanations as inline popups near the flagged text. Without it, suggestions are shown in the echo area when point is on a diagnostic.
+Anthropic endpoints are auto-detected and use the `x-api-key` header; all other providers use a `Bearer` token in the `Authorization` header.
 
-```elisp
-(use-package flymake-popon
-  :ensure t
-  :hook (flymake-mode . flymake-popon-mode))
-```
+### API key
+Choose one method:
+1. Read from a file (recommended): `(setq flywrite-api-key-file "~/.flywrite-api-key")`
+2. Set directly: `(setq flywrite-api-key "sk-ant-...")`
+3. Use `FLYWRITE_API_KEY` environment variable (no config needed)
+
+## Popup explanations
+For the best experience, install [flymake-popon](https://github.com/akicho8/flymake-popon) to see suggestion explanations as inline popups near the flagged text (included in the [Quick start](#quick-start) config). Without it, suggestions are shown in the echo area when point is on a diagnostic.
 
 ## Configuration
 
-Optional settings:
+### Optional settings
 
 ```elisp
 (setq flywrite-model "claude-sonnet-4-20250514")   ; default model
