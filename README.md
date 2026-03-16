@@ -4,11 +4,13 @@ An Emacs minor mode that provides inline writing suggestions powered by an LLM. 
 
 **Privacy warning:** Flywrite sends your document text to an LLM API.
 
+![flywrite-mode screenshot](screenshot.png)
+
 ## Quick start
 
 Get an Anthropic API key at https://console.anthropic.com/settings/keys and save it to `~/.flywrite-api-key`.
 
-Add credits at https://platform.claude.com/settings/billing $5 should be more than enough.
+Add credits at https://platform.claude.com/settings/billing — as of Spring 2026, $5 should last months of typical use.
 
 Clone.
 ```bash
@@ -18,26 +20,20 @@ git clone https://github.com/awdeorio/flywrite.git
 Configure.
 ```elisp
 (use-package flywrite-mode
-  :load-path "/path/to/flywrite"
+  :load-path "~/src/flywrite"
   :commands (flywrite-mode)
   :config
-  ;; Required
   (setq flywrite-api-url "https://api.anthropic.com/v1/messages")
-  (setq flywrite-api-key-file "~/.flywrite-api-key")
-
-  ;; Optional
-  (setq flywrite-debug t)                            ; log to *flywrite-log*
-  (setq flywrite-model "claude-sonnet-4-20250514"))  ; default model
+  (setq flywrite-api-key-file "~/.flywrite-api-key"))
 
 (use-package flymake-popon
   :ensure t
   :hook (flymake-mode . flymake-popon-mode))
 ```
 
-Open a text file and save this content.
-```
-The quick brown fox jumpted over the lazy dog. Him and his friend went to the store to buy some grocerys. The weather was very extremely hot outside yesterday.
-```
+Open a text file and save this content (it contains intentional errors for flywrite to catch):
+
+> The quick brown fox jumpted over the lazy dog. Him and his friend went to the store to buy some grocerys. The weather was very extremely hot outside yesterday.
 
 Run `M-x flywrite-mode`.  Try checking the entire buffer with `M-x flywrite-check-buffer`.  Move the point over one of the wavy underlines.
 
@@ -45,17 +41,10 @@ Run `M-x flywrite-mode`.  Try checking the entire buffer with `M-x flywrite-chec
 
 Now try adding new text.  New sentences are checked after a short delay.
 
-## Installation
-Requirements:
-- Emacs 27.1+
-- LLM API key
-
-No external Emacs packages are required — flywrite uses only built-in libraries (`url`, `json`, `flymake`, `md5`).
-
-See [Quick start](#quick-start) for clone and configuration instructions.
+## Configuration
 
 ### API providers
-Set `flywrite-api-url` to point to a Messages API-compatible endpoint.
+Set `flywrite-api-url` to your provider's endpoint. Flywrite natively supports the Anthropic Messages API and the OpenAI Chat Completions API.
 
 **Anthropic**
 1. `(setq flywrite-api-url "https://api.anthropic.com/v1/messages")`
@@ -63,32 +52,29 @@ Set `flywrite-api-url` to point to a Messages API-compatible endpoint.
 3. Add credits at https://platform.claude.com/settings/billing
 
 **OpenAI**
-1. `(setq flywrite-api-url "https://api.openai.com/v1/messages")`
+1. `(setq flywrite-api-url "https://api.openai.com/v1/chat/completions")`
 2. Get an API key at https://platform.openai.com/api-keys
 3. Add credits at https://platform.openai.com/settings/organization/billing/overview
 
-**Google Gemini**
-1. `(setq flywrite-api-url "https://generativelanguage.googleapis.com/v1/messages")`
+**Google Gemini** (OpenAI-compatible endpoint)
+1. `(setq flywrite-api-url "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")`
 2. Get an API key at https://aistudio.google.com/apikey
 3. Add credits at https://aistudio.google.com/plan_billing
 
-Anthropic endpoints are auto-detected and use the `x-api-key` header; all other providers use a `Bearer` token in the `Authorization` header.
+Anthropic endpoints are auto-detected (by hostname) and use the `x-api-key` header; all other providers use a `Bearer` token in the `Authorization` header.
 
 ### API key
 Choose one method:
-1. Read from a file (recommended): `(setq flywrite-api-key-file "~/.flywrite-api-key")`
+1. Read from a file (recommended): `(setq flywrite-api-key-file "~/.flywrite-api-key")` — use `chmod 600` to restrict access
 2. Set directly: `(setq flywrite-api-key "sk-ant-...")`
 3. Use `FLYWRITE_API_KEY` environment variable (no config needed)
 
-## Popup explanations
-For the best experience, install [flymake-popon](https://github.com/akicho8/flymake-popon) to see suggestion explanations as inline popups near the flagged text (included in the [Quick start](#quick-start) config). Without it, suggestions are shown in the echo area when point is on a diagnostic.
-
-## Configuration
-
 ### Optional settings
 
+The default model is `claude-sonnet-4-20250514`. Override it or any other setting below as needed.
+
 ```elisp
-(setq flywrite-model "claude-sonnet-4-20250514")   ; default model
+(setq flywrite-model "claude-sonnet-4-20250514")   ; default
 (setq flywrite-idle-delay 1.5)                     ; seconds before checking
 (setq flywrite-max-concurrent 3)                   ; max parallel API calls
 (setq flywrite-granularity 'sentence)              ; 'sentence or 'paragraph
@@ -118,6 +104,10 @@ Rules:
 - Do not flag correct sentences")
 ```
 
+### Popup explanations
+For the best experience, install [flymake-popon](https://github.com/akicho8/flymake-popon) to see suggestion explanations as inline popups near the flagged text (included in the [Quick start](#quick-start) config). Without it, suggestions are shown in the echo area when point is on a diagnostic.
+
+
 ## Usage
 
 Enable the mode in any buffer:
@@ -137,6 +127,21 @@ As you type, flywrite will automatically check sentences after a short idle dela
 | `C-c C-g c` | `flywrite-clear`           | Clear diagnostics and caches     |
 | `M-n`       | `flymake-goto-next-error`  | Next diagnostic (flymake built-in) |
 | `M-p`       | `flymake-goto-prev-error`  | Previous diagnostic (flymake built-in) |
+
+## Troubleshooting
+
+**Nothing happens / no underlines appear**
+1. Make sure `flywrite-mode` is active: check the mode line for `flywrite`.
+2. Enable debug logging with `(setq flywrite-debug t)` and check the `*flywrite-log*` buffer for errors.
+3. Verify your API key is set correctly — `M-: (flywrite--get-api-key)` should return your key.
+4. Verify your API URL is set — `M-: flywrite-api-url` should return a URL.
+5. Try `M-x flywrite-check-buffer` to force a check on existing text.
+
+**Underlines appear but no popup explanation**
+Install [flymake-popon](https://github.com/akicho8/flymake-popon) (see [Popup explanations](#popup-explanations)). Without it, move point onto an underlined word and check the echo area at the bottom of the frame.
+
+**API errors in the log**
+Check that `flywrite-api-url` matches your provider and that your API key has credits remaining.
 
 ## Debugging
 
