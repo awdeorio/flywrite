@@ -331,8 +331,8 @@ request.  START-TIME is used for latency logging."
             (progn
               ;; Check for HTTP errors
               (when (plist-get status :error)
-                (flywrite--log "HTTP error: %s (%.2fs)" (plist-get status :error) latency)
-                (error "HTTP error: %s" (plist-get status :error)))
+                (flywrite--log "API HTTP error: %s (%.2fs)" (plist-get status :error) latency)
+                (error "API request failed: %s" (plist-get status :error)))
 
               ;; Skip HTTP headers
               (goto-char (point-min))
@@ -416,9 +416,12 @@ request.  START-TIME is used for latency logging."
                             ;; Mark as checked
                             (puthash hash t flywrite--checked-sentences))
                         (error
-                         (flywrite--log "JSON parse error: %s" (error-message-string parse-err)))))))))
+                         (flywrite--log "LLM returned unparseable response: %s\nRaw text: %s"
+                                        (error-message-string parse-err) text)
+                         (message "flywrite: LLM returned invalid JSON (not a bug in flywrite). Enable `flywrite-debug' and check *flywrite-log* for details.")))))))))
           (error
            (flywrite--log "Response handler error: %s" (error-message-string err))
+           (message "flywrite: API error: %s" (error-message-string err))
            ;; Remove hash from checked so this sentence can be retried
            (when (buffer-live-p buf)
              (with-current-buffer buf
