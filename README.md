@@ -37,6 +37,7 @@ Configure with use-package
   )
 ```
 
+### API keys
 Anthropic
 1. Get an API key at https://console.anthropic.com/settings/keys
 2. Add credits https://platform.claude.com/settings/billing
@@ -49,6 +50,7 @@ Google Gemini
 1. Get an API key at https://aistudio.google.com/apikey
 2. Add credits https://aistudio.google.com/plan_billing
 
+## Popup explanations
 For the best experience, install [flymake-popon](https://github.com/akicho8/flymake-popon) to see suggestion explanations as inline popups near the flagged text. Without it, suggestions are shown in the echo area when point is on a diagnostic.
 
 ```elisp
