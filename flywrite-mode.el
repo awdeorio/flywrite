@@ -1,8 +1,8 @@
 ;;; flywrite-mode.el --- Inline writing suggestions via LLM -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2026
+;; Copyright (C) 2026 Andrew DeOrio
 
-;; Author: Andrew DeOrio
+;; Author: Andrew DeOrio <awdeorio@umich.edu>
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: writing, style, grammar, flymake
