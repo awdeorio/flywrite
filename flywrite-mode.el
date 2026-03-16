@@ -34,9 +34,19 @@
 
 (defcustom flywrite-api-key nil
   "Anthropic API key.
-Falls back to the ANTHROPIC_API_KEY environment variable if nil."
-  :type '(choice (const :tag "Use ANTHROPIC_API_KEY env var" nil)
+Falls back to `flywrite-api-key-file', then the ANTHROPIC_API_KEY
+environment variable."
+  :type '(choice (const :tag "Use file or env var" nil)
                  (string :tag "API key"))
+  :group 'flywrite)
+
+(defcustom flywrite-api-key-file nil
+  "Path to a file containing the Anthropic API key.
+The file should contain the key on its first line.  Leading and
+trailing whitespace is stripped.  Checked when `flywrite-api-key'
+is nil, before falling back to the ANTHROPIC_API_KEY env var."
+  :type '(choice (const :tag "None" nil)
+                 (file :tag "Key file path"))
   :group 'flywrite)
 
 (defcustom flywrite-model "claude-sonnet-4-20250514"
@@ -234,11 +244,25 @@ BEG and END are the changed region boundaries."
 
 ;;;; ---- API call ----
 
+(defun flywrite--read-api-key-file ()
+  "Read and return the API key from `flywrite-api-key-file', or nil."
+  (when (and flywrite-api-key-file
+             (file-readable-p flywrite-api-key-file))
+    (let ((key (string-trim
+                (with-temp-buffer
+                  (insert-file-contents flywrite-api-key-file)
+                  (buffer-substring-no-properties
+                   (point-min) (line-end-position))))))
+      (when (> (length key) 0) key))))
+
 (defun flywrite--get-api-key ()
-  "Return the API key from `flywrite-api-key' or the environment."
+  "Return the API key.
+Checks `flywrite-api-key', then `flywrite-api-key-file', then
+the ANTHROPIC_API_KEY environment variable."
   (or flywrite-api-key
+      (flywrite--read-api-key-file)
       (getenv "ANTHROPIC_API_KEY")
-      (error "No API key: set `flywrite-api-key' or ANTHROPIC_API_KEY env var")))
+      (error "No API key: set `flywrite-api-key', `flywrite-api-key-file', or ANTHROPIC_API_KEY env var")))
 
 (defun flywrite--send-request (buf beg end hash)
   "Send an API request for the text in BUF between BEG and END.
