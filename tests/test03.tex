@@ -1,0 +1,291 @@
+\documentclass[12pt]{exam}
+
+% essential packages
+\usepackage{fullpage} % margin formatting
+\usepackage{enumitem} % configure enumerate and itemize
+\usepackage{amsmath, amsfonts, amssymb, mathtools} % math symbols
+\usepackage{xcolor, colortbl} % colors, including in tables
+\usepackage{makecell} % thicker \Xhline in table
+\usepackage{graphicx} % images, resizing
+\usepackage{multicol}
+
+% sometimes needed packages
+\usepackage{wasysym} % Just used for \smiley{}
+\usepackage{hyperref} % hyperlinks
+\hypersetup{colorlinks=true, urlcolor=blue}
+% \usepackage{logicproof} % natural deduction
+% \usepackage{tikz} % drawing graphs
+% \usetikzlibrary{positioning}
+% \usepackage{multicol}
+% \usepackage{algpseudocode} % pseudocode
+
+% paragraph formatting
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0cm}
+
+% newline after Solution:
+\renewcommand{\solutiontitle}{\noindent\textbf{Solution:}\par\noindent}
+
+% less space before itemize/enumerate
+\setlist{topsep=0pt}
+
+% creates \filcl to grey out cells for groupwork grading
+\newcommand{\filcl}{\cellcolor{gray!25}}
+
+% creates \probnum to get the problem number
+\newcounter{probnumcount}
+\setcounter{probnumcount}{1}
+\newcommand{\probnum}{\arabic{probnumcount}. \addtocounter{probnumcount}{1}}
+
+% use roman numerals by default
+\setlist[enumerate]{label={(\roman*)}}
+
+% creates custom list environments for grading guidelines, question parts
+\newlist{guidelines}{itemize}{1}
+\setlist[guidelines]{label={}, left=0pt .. \parindent, nosep}
+\newlist{gwguidelines}{enumerate}{1}
+\setlist[gwguidelines]{label={(\roman*)}, nosep}
+\newlist{qparts}{enumerate}{2}
+\setlist[qparts]{label={(\alph*)}}
+\newlist{qsubparts}{enumerate}{2}
+\setlist[qsubparts]{label={(\roman*)}}
+\newlist{stmts}{enumerate}{1}
+\setlist[stmts]{label={(\roman*)}, nosep}
+\newlist{pflist}{itemize}{4}
+\setlist[pflist]{label={$\bullet$}, nosep}
+\newlist{enumpflist}{enumerate}{4}
+\setlist[enumpflist]{label={(\arabic*)}, nosep}
+
+\printanswers
+
+\begin{document}
+%%%%%%%%%%%%%%% TITLE PAGE %%%%%%%%%%%%%%%
+\title{EECS 203: Discrete Mathematics\\
+  Fall 2025\\
+  Assignment 0: Course Policies \& Page-Matching}
+\date{}\author{}
+\maketitle
+\vspace{-55pt}
+\begin{center}
+  \huge Due \textbf{Tuesday, Sep. 2}, 10:00 pm\\
+\Large No late homework accepted past midnight.\\
+\vspace{10pt}
+\large Number of Problems: 10
+\hspace{3cm}
+Total Points: 100
+\end{center}
+\vspace{20pt}
+These instructions apply to this, and all future homeworks:
+
+\begin{itemize}
+    \item We strongly prefer that students compose homework solutions using a word processor (Google Docs or MS Word), or ideally using \LaTeX, but we will accept handwritten homework submissions scanned/photographed and converted to PDF. Note that submitted files must be less than 50 MB in size, but they really should be much smaller than this.
+    
+    \item All problems require work to be shown. Solutions to questions that require a numerical answer will not be given credit if no work/explanation is given. You must provide some sort of explanation or justification for yes/no, true/false, multiple choice, and other similar problems (so we know you didn’t just guess), unless explicitly stated in the problem. For example, simply answering ``true" for a true/false question without providing an explanation will receive little or no credit.
+
+    \item This assignment should be submitted as a PDF through Gradescope. You can submit via the Gradescope mobile app (\href{https://www.gradescope.com/get_started#student-submission}{\textcolor{blue}{instructions}}) or Gradescope website (\href{https://guides.gradescope.com/hc/en-us/articles/21864315441677-Submitting-a-PDF-for-an-assignment}{\textcolor{blue}{instructions}}).
+    
+    {\bf Remember to ALWAYS ASSIGN PAGES after you upload. We will not grade homework problems without properly assigned pages on Gradescope.} Please submit early and often, and double-check that you matched each question to the page(s) where your solution appears.
+    
+    \item No email or Piazza regrade requests will be accepted. For more detail on regrade requests, please refer to course policies.
+    
+    \item Honor Code: By submitting this homework, you agree that you are in compliance with the Engineering Honor Code and the Course Policies for EECS 203, and that you are submitting your own work.
+\end{itemize}
+\newpage
+
+%%%%%%%%%%%%%%% TITLE PAGE %%%%%%%%%%%%%%%
+
+\subsection*{\probnum Did You Read The First Page? [5 points]}
+Did you read the first page? We get it, it's a lot of words. Please give it a read! It's important information that you'll want to know to \textbf{avoid losing points from logistical mistakes} as you complete homework assignments throughout the semester \smiley{}. After you've given the first page a careful read-over, write what you're most excited about for the new semester as your ``answer" to this question.
+\begin{solution}
+I read the first page! I'm most excited about learning discrete mathematics and developing proof-writing skills that will be useful throughout my computer science career.
+\end{solution}
+
+\subsection*{\probnum A Thing About Page Matching [5 points]}
+You must match your pages to the problems on Gradescope in order to receive credit. Please note as soon as you press submit, you’ve successfully submitted by the deadline. You can still assign the page(s) for each problem with no rush; assigning pages does not add to, or delay your submission time. Write down your favorite class so far to affirm you’ve read and understand this.
+\begin{solution}
+I understand that I must assign pages after submitting on Gradescope. My favorite class so far has been Calculus II.
+\end{solution}
+
+
+
+%%% Syllabus questions %%%%
+
+\subsection*{\probnum Resource Location [12 points]}
+Where can you find each of the following resources? No justification necessary.
+\begin{qparts}
+    \item Lecture slides, lecture recordings, course announcements
+    \item Scheduled office hours (should be more specific than your answer to (a))
+    \item Questions and answers about course content and logistics (online forum)
+\end{qparts}
+
+\begin{solution}
+\begin{qparts}
+    \item Canvas (the course Canvas page)
+    \item The course website (linked from Canvas), which has a dedicated office hours calendar/schedule page
+    \item Piazza (linked from Canvas)
+\end{qparts}
+\end{solution}
+
+
+\subsection*{\probnum Exam dates [12 points]}
+What are the dates and times of the two course exams? No justification necessary.
+
+\begin{solution}
+\begin{itemize}
+    \item Midterm Exam: Thursday, October 9, 2025, 6:00--8:00 pm
+    \item Final Exam: Tuesday, December 16, 2025, 10:30 am--12:30 pm
+\end{itemize}
+\end{solution}
+
+
+\subsection*{\probnum Regrade Requests [12 points]}
+
+You do not need to justify or explain your answer to any part of this problem.
+\begin{qparts}
+    \item Where do you submit a regrade request?
+
+    \item What is the deadline for submitting regrade requests? Select \textbf{one} of the following:
+    \begin{qsubparts}
+        \item by the last day of classes
+        \item by the next exam
+        \item 24 hours after the assignment's grades have been released
+        \item 1 week after the assignment's grades have been released
+    \end{qsubparts}
+
+    \item When should you submit a regrade request? Select \textbf{any number} of the following:
+    \begin{qsubparts}
+        \item I feel like I deserve more points
+        \item My solution was incorrectly graded according to the posted rubric
+        \item I have an alternate solution I think is right
+        \item I have an alternate solution I think is right, and I checked it with an instructor in office hours or on Piazza
+    \end{qsubparts}
+    \item What 3 things should you make sure to (re)read before submitting a regrade request?
+\end{qparts}
+
+\begin{solution}
+\begin{qparts}
+    \item Gradescope
+    \item (iv) 1 week after the assignment's grades have been released
+    \item (ii) My solution was incorrectly graded according to the posted rubric; and (iv) I have an alternate solution I think is right, and I checked it with an instructor in office hours or on Piazza
+    \item Before submitting a regrade request, you should re-read: (1) the problem statement, (2) the posted solutions and rubric, and (3) the course policies on regrades.
+\end{qparts}
+\end{solution}
+
+\subsection*{\probnum Admin Form [3 points]}
+What is the best way to contact course staff about individual administrative concerns, and where can you find the link? No justification necessary.
+
+\begin{solution}
+The best way to contact course staff about individual administrative concerns is to submit the course Admin Form (a Google Form). The link can be found on the course Canvas page.
+\end{solution}
+
+
+\subsection*{\probnum Reflection [9 points]}
+What strengths, strategies, and resources do you have to help you succeed in each of following?
+
+\begin{qparts}
+    \item Homework
+    \item Collaborating with classmates
+    \item Exams
+\end{qparts}
+
+\begin{solution}
+\begin{qparts}
+    \item For homework, my strengths include careful reading of problem statements and persistence when stuck. My strategies include starting early, attending office hours when I need help, and reviewing lecture notes before attempting problems. Resources include lecture slides on Canvas, Piazza, and office hours.
+    \item For collaborating with classmates, I am good at explaining my reasoning and listening to different approaches. I plan to form a study group and use Piazza to discuss problems at a high level while making sure to write up solutions independently.
+    \item For exams, I prepare by reviewing all homework problems and solutions, practicing with past exams, and making sure I understand the proofs covered in lecture. I work well under timed conditions when I have practiced enough material ahead of time.
+\end{qparts}
+\end{solution}
+
+
+\subsection*{\probnum Exponents [16 points]}
+Compute the value of each of the following.  We encourage you to keep it in exponential form as long as you can, for practice. \textbf{Remember to show your work.}
+\begin{qparts}
+    \item $5^3$
+    \item $2^3\cdot 2^2$
+    \item $\frac{3^6}{3^3}$
+    \item $5^0$
+    \item $(2^4)^2$
+    \item $2^{(4^2)}$ (use a calculator for this one if you need to!)
+    \item $16^{\frac 12}$
+    \item $16^{-2}$
+\end{qparts}
+\begin{solution}
+\begin{qparts}
+    \item $5^3 = 5 \cdot 5 \cdot 5 = 125$
+    \item $2^3 \cdot 2^2 = 2^{3+2} = 2^5 = 32$
+    \item $\dfrac{3^6}{3^3} = 3^{6-3} = 3^3 = 27$
+    \item $5^0 = 1$
+    \item $(2^4)^2 = 2^{4 \cdot 2} = 2^8 = 256$
+    \item $2^{(4^2)} = 2^{16} = 65536$
+    \item $16^{1/2} = \sqrt{16} = 4$
+    \item $16^{-2} = \dfrac{1}{16^2} = \dfrac{1}{256}$
+\end{qparts}
+\end{solution}
+
+\subsection*{\probnum Logarithms [16 points]}
+Compute the value of each of the following.  If the answer does not come out cleanly and results in an infinite decimal expansion, write ``\textit{too hard to compute}." If the result is not defined, write ``\textit{undefined}." For any question referencing $x$ or $y,$ let $\log_5(x)=2.6$ and $\log_5(y)=5.2.$ \textbf{Remember to show your work.}
+
+\begin{multicols}{2}
+\begin{qparts}
+    \item $\log_2{64}$
+    \item $\log_7{7}$
+    \item $\log_7{1}$
+    \item $\log_7{0}$
+    \columnbreak
+    \item $\log_5(x+y)$
+    \item $\log_5(xy)$
+    \item $\log_2(x)$
+    \item $\log_5(x^{25})$
+\end{qparts}
+\end{multicols}
+
+\begin{solution}
+\begin{qparts}
+    \item $\log_2 64 = \log_2 2^6 = 6$
+    \item $\log_7 7 = 1$ \quad (since $7^1 = 7$)
+    \item $\log_7 1 = 0$ \quad (since $7^0 = 1$)
+    \item $\log_7 0 = \textit{undefined}$ \quad (no power of 7 equals 0)
+    \item $\log_5(x+y)$: There is no logarithm rule to simplify a log of a sum, so this is \textit{too hard to compute}.
+    \item $\log_5(xy) = \log_5 x + \log_5 y = 2.6 + 5.2 = 7.8$
+    \item $\log_2(x) = \dfrac{\log_5 x}{\log_5 2} = \dfrac{2.6}{\log_5 2}$. Since $\log_5 2$ has an infinite decimal expansion, this is \textit{too hard to compute}.
+    \item $\log_5(x^{25}) = 25 \cdot \log_5 x = 25 \cdot 2.6 = 65$
+\end{qparts}
+\end{solution}
+
+
+\subsection*{\probnum Covering your Bases [10 points]}
+In our everyday life, we use the decimal system, AKA ``base 10," to represent numbers. However, there are other bases that are useful, particularly in Computer Science.
+
+In this question, you will get practice working in different bases. The value of a number $xyz$ (here, $x,$ $y,$ and $z$ represent digits in a three-digit number in some base) depends on which base you're using. In the usual base 10 system, the value of $xyz$ is $(xyz)_{10} = x \cdot 100 + y \cdot 10 + z \cdot 1 = x \cdot 10^2 + y \cdot 10^1 + z \cdot 10^0$.
+
+This formulation can be generalized to any base: in base $b$, the value of $xyz$ is $$(xyz)_{b} = x \cdot b^2 + y \cdot b^1 + z \cdot b^0.$$
+
+The values that $x,y,z$ can take also depend on the base:
+\begin{itemize}
+    \item Base 10 (decimal): 10 possible values, the digits $\{0, 1, 2, \dots, 9\}$
+    \item Base 2 (binary): 2 possible values, $\{0, 1\}$
+    \item Base 16 (hexadecimal): 16 possible values, $\{0, 1, 2, \dots 9, \text{A}, \text{B}, \text{C}, \text{D}, \text{E}, \text{F}\}$, \\
+    where $(\text{A})_{16} = (10)_{10}, (\text{B})_{16} = (11)_{10}, \dots , (\text{F})_{16} = (15)_{10}$.
+\end{itemize}
+
+Find the decimal representation of each of the numbers given below. \textbf{Remember to show your work.}
+\begin{qparts}
+    \item $(101)_2$
+    \item $(101)_{16}$
+    \item $(253)_{8}$
+    \item $(11010)_2$
+    \item $(23\text{D})_{16}$
+\end{qparts}
+
+\begin{solution}
+\begin{qparts}
+    \item $(101)_2 = 1 \cdot 2^2 + 0 \cdot 2^1 + 1 \cdot 2^0 = 4 + 0 + 1 = (5)_{10}$
+    \item $(101)_{16} = 1 \cdot 16^2 + 0 \cdot 16^1 + 1 \cdot 16^0 = 256 + 0 + 1 = (257)_{10}$
+    \item $(253)_8 = 2 \cdot 8^2 + 5 \cdot 8^1 + 3 \cdot 8^0 = 128 + 40 + 3 = (171)_{10}$
+    \item $(11010)_2 = 1 \cdot 2^4 + 1 \cdot 2^3 + 0 \cdot 2^2 + 1 \cdot 2^1 + 0 \cdot 2^0 = 16 + 8 + 0 + 2 + 0 = (26)_{10}$
+    \item $(23\text{D})_{16} = 2 \cdot 16^2 + 3 \cdot 16^1 + 13 \cdot 16^0 = 512 + 48 + 13 = (573)_{10}$
+\end{qparts}
+\end{solution}
+
+
+\end{document}
