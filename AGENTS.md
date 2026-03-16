@@ -22,7 +22,9 @@ This is a pure Emacs Lisp package with no build system, no external dependencies
 emacs -Q --batch -f batch-byte-compile flywrite-mode.el && rm -f flywrite-mode.elc
 ```
 
-**Requires:** Emacs 27.1+, an LLM API key (via `flywrite-api-key-file` (recommended), `flywrite-api-key`, or `FLYWRITE_API_KEY` env var).
+**Requires:** Emacs 27.1+, an LLM API key (via `flywrite-api-key-file` (recommended), `flywrite-api-key`, or `FLYWRITE_API_KEY` env var). API key is optional for local providers like Ollama.
+
+**README consistency:** Default values shown in the README (including the system prompt) must match the source code in `flywrite-mode.el`. When changing defaults, update both.
 
 ## Architecture
 
