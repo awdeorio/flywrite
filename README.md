@@ -1,6 +1,6 @@
 # flywrite-mode
 
-An Emacs minor mode that provides inline writing suggestions powered by an LLM. Suggestions appear as flymake diagnostics (wavy underlines) with explanations via flymake-popon or the echo area.
+An Emacs minor mode for grammar, style, and clarity feedback. Like Flyspell, but powered by an LLM. One file, no dependencies. Suggestions appear as flymake diagnostics with inline explanations.
 
 **Privacy warning:** Flywrite sends your document text to an LLM API.
 
