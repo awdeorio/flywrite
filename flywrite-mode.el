@@ -279,7 +279,7 @@ BEG and END are the changed region boundaries."
                 ;; Add new dirty entry
                 (push (list ubeg uend hash) flywrite--dirty-registry)
                 (flywrite--log "Dirty: [%d-%d] hash=%s queue=%d text=%S"
-                               ubeg uend (substring hash 0 8)
+                               ubeg uend hash
                                (length flywrite--dirty-registry)
                                (truncate-string-to-width
                                 (string-trim
@@ -321,7 +321,7 @@ HASH is the content hash at time of dispatch for stale checking."
   ;; Skip if already checked (catches duplicates from queue)
   (if (with-current-buffer buf
         (gethash hash flywrite--checked-sentences))
-      (flywrite--log "Skipping already-checked hash=%s" (substring hash 0 8))
+      (flywrite--log "Skipping already-checked hash=%s" hash)
     (unless flywrite-api-url
       (flywrite--log "ERROR: flywrite-api-url is not set")
       (error "flywrite-api-url is not set.  See the README for configuration"))
@@ -362,7 +362,7 @@ HASH is the content hash at time of dispatch for stale checking."
          (url-request-data (encode-coding-string payload 'utf-8))
          (start-time (current-time)))
     (flywrite--log "API call: [%d-%d] text=%.40s hash=%s"
-                   beg end text (substring hash 0 8))
+                   beg end text hash)
     (with-current-buffer buf
       (cl-incf flywrite--in-flight)
       ;; Mark as checked now to prevent duplicate in-flight requests
@@ -394,7 +394,7 @@ request.  START-TIME is used for latency logging."
         (if (bound-and-true-p flywrite--response-handled)
             (progn
               (flywrite--log "Ignoring duplicate callback for hash=%s"
-                             (substring hash 0 8))
+                             hash)
               (setq duplicate t))
           (setq-local flywrite--response-handled t))))
     (if duplicate
@@ -411,17 +411,17 @@ request.  START-TIME is used for latency logging."
               ;; Check for HTTP errors
               (when (plist-get status :error)
                 (let ((err-info (plist-get status :error)))
-                  (flywrite--log "API HTTP error: %s (%.2fs)" err-info latency)
+                  (flywrite--log "API HTTP error: %s (%.2fs) hash=%s" err-info latency hash)
                   ;; On 429, also clear pending queue to stop hammering
                   (when (and (listp err-info)
                              (member 429 err-info))
                     (flywrite--log "Rate limited (429) hash=%s"
-                                   (substring hash 0 8))
+                                   hash)
                     (when (buffer-live-p buf)
                       (with-current-buffer buf
                         (when flywrite--pending-queue
-                          (flywrite--log "Clearing %d queued requests due to rate limit"
-                                         (length flywrite--pending-queue))
+                          (flywrite--log "Clearing %d queued requests due to rate limit hash=%s"
+                                         (length flywrite--pending-queue) hash)
                           (setq flywrite--pending-queue nil)))))
                   (error "API request failed: %s" err-info)))
 
@@ -447,7 +447,7 @@ request.  START-TIME is used for latency logging."
                                     (message (and choice (alist-get 'message choice))))
                                (and message (alist-get 'content message))))))
 
-                (flywrite--log "Response: %.2fs hash=%s" latency (substring hash 0 8))
+                (flywrite--log "Response: %.2fs hash=%s" latency hash)
 
                 (when (and text (buffer-live-p buf))
                   (with-current-buffer buf
@@ -456,7 +456,7 @@ request.  START-TIME is used for latency logging."
                             (< beg (point-min))
                             (not (string= hash (flywrite--content-hash beg end))))
                         (progn
-                          (flywrite--log "Stale response discarded: [%d-%d]" beg end)
+                          (flywrite--log "Stale response discarded: [%d-%d] hash=%s" beg end hash)
                           ;; Remove stale hash so updated content can be checked
                           (remhash hash flywrite--checked-sentences)
                           ;; Re-dirty so it gets re-checked
@@ -474,8 +474,8 @@ request.  START-TIME is used for latency logging."
                                                "\n?```[ \t\n]*\\'" "" text)))
                                  (parsed (json-read-from-string clean-text))
                                  (suggestions (alist-get 'suggestions parsed)))
-                            (flywrite--log "Suggestions: %d for [%d-%d]"
-                                           (length suggestions) beg end)
+                            (flywrite--log "Suggestions: %d for [%d-%d] hash=%s"
+                                           (length suggestions) beg end hash)
                             ;; Remove old diagnostics for this region
                             (setq flywrite--diagnostics
                                   (cl-remove-if
@@ -498,18 +498,18 @@ request.  START-TIME is used for latency logging."
                                              buf diag-beg diag-end :note
                                              (concat reason " [flywrite]"))
                                             flywrite--diagnostics)
-                                      (flywrite--log "Diagnostic: [%d-%d] %s"
-                                                     diag-beg diag-end reason))
-                                  (flywrite--log "Quote not found, skipping: %s" quote-str))))
+                                      (flywrite--log "Diagnostic: [%d-%d] %s hash=%s"
+                                                     diag-beg diag-end reason hash))
+                                  (flywrite--log "Quote not found, skipping: %s hash=%s" quote-str hash))))
                             ;; Report all diagnostics to flymake
                             (if flywrite--report-fn
                                 (funcall flywrite--report-fn flywrite--diagnostics)
-                              (flywrite--log "Warning: report-fn nil, diag-fns=%s"
-                                             flymake-diagnostic-functions)
+                              (flywrite--log "Warning: report-fn nil, diag-fns=%s hash=%s"
+                                             flymake-diagnostic-functions hash)
                               ;; Re-add backend if something removed it
                               (unless (memq #'flywrite-flymake
                                             flymake-diagnostic-functions)
-                                (flywrite--log "Re-adding flywrite-flymake backend")
+                                (flywrite--log "Re-adding flywrite-flymake backend hash=%s" hash)
                                 (add-hook 'flymake-diagnostic-functions
                                           #'flywrite-flymake nil t))
                               (when (bound-and-true-p flymake-mode)
@@ -517,11 +517,11 @@ request.  START-TIME is used for latency logging."
                             ;; Mark as checked
                             (puthash hash t flywrite--checked-sentences))
                         (error
-                         (flywrite--log "LLM returned unparseable response: %s\nRaw text: %s"
-                                        (error-message-string parse-err) text)
+                         (flywrite--log "LLM returned unparseable response: %s hash=%s\nRaw text: %s"
+                                        (error-message-string parse-err) hash text)
                          (message "flywrite: LLM returned invalid JSON (not a bug in flywrite). Enable `flywrite-debug' and check *flywrite-log* for details."))))))))
           (error
-           (flywrite--log "Response handler error: %s" (error-message-string err))
+           (flywrite--log "Response handler error: %s hash=%s" (error-message-string err) hash)
            (message "flywrite: API error: %s" (error-message-string err))
            ;; Keep hash in checked-sentences to prevent automatic retry.
            ;; User can use flywrite-clear or flywrite-check-at-point to
@@ -578,7 +578,7 @@ Snapshots and clears the dirty registry, dispatches or queues requests."
                 (if (< flywrite--in-flight flywrite-max-concurrent)
                     (flywrite--send-request buf beg end hash)
                   (progn
-                    (flywrite--log "Queued: [%d-%d] (at cap %d)" beg end flywrite--in-flight)
+                    (flywrite--log "Queued: [%d-%d] (at cap %d) hash=%s" beg end flywrite--in-flight hash)
                     (setq flywrite--pending-queue
                           (append flywrite--pending-queue
                                   (list (list buf beg end hash)))))))))))))))
@@ -597,7 +597,7 @@ Snapshots and clears the dirty registry, dispatches or queues requests."
       (when (and (buffer-live-p buf)
                  (<= end (with-current-buffer buf (point-max)))
                  (not (gethash hash (buffer-local-value 'flywrite--checked-sentences buf))))
-        (flywrite--log "Draining queue: [%d-%d]" beg end)
+        (flywrite--log "Draining queue: [%d-%d] hash=%s" beg end hash)
         (flywrite--send-request buf beg end hash)))))
 
 ;;;; ---- Flymake backend ----
