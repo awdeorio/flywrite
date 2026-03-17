@@ -20,8 +20,7 @@ Configure (Emacs 30+).
   :commands (flywrite-mode)
   :config
   (setq flywrite-api-url "https://api.anthropic.com/v1/messages")
-  (setq flywrite-api-key-file "~/.flywrite-api-key")
-  (setq flywrite-system-prompt 'academic))  ; 'prose, 'academic, or custom string
+  (setq flywrite-api-key-file "~/.flywrite-api-key"))
 
 (use-package flymake-popon
   :hook (flymake-mode . flymake-popon-mode)
@@ -43,8 +42,7 @@ Configure.
   :commands (flywrite-mode)
   :config
   (setq flywrite-api-url "https://api.anthropic.com/v1/messages")
-  (setq flywrite-api-key-file "~/.flywrite-api-key")
-  (setq flywrite-system-prompt 'academic))  ; 'prose, 'academic, or custom string
+  (setq flywrite-api-key-file "~/.flywrite-api-key"))
 
 (use-package flymake-popon
   :ensure t
