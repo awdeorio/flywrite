@@ -90,8 +90,7 @@ is nil, before falling back to the FLYWRITE_API_KEY env var."
   :group 'flywrite)
 
 (defcustom flywrite-check-confirm-threshold 50
-  "Prompt for confirmation when `flywrite-check-buffer' would make
-more than this many API calls."
+  "Max API calls before `flywrite-check-buffer' prompts for confirmation."
   :type 'integer
   :group 'flywrite)
 
@@ -250,7 +249,7 @@ If it is a symbol, look it up in `flywrite--prompt-alist'."
       (unless entry
         (error "Unknown flywrite-system-prompt style: %s" flywrite-system-prompt))
       (cdr entry)))
-   (t (error "flywrite-system-prompt must be a symbol or string, got: %S"
+   (t (error "Variable flywrite-system-prompt must be a symbol or string, got: %S"
              flywrite-system-prompt))))
 
 ;;;; ---- Logging ----
@@ -368,7 +367,7 @@ BEG and END are the changed region boundaries."
 Signal an error if the file is set but not readable."
   (when flywrite-api-key-file
     (unless (file-readable-p flywrite-api-key-file)
-      (error "flywrite-api-key-file %s not found or not readable"
+      (error "Cannot read flywrite-api-key-file: %s"
              flywrite-api-key-file))
     (let ((key (string-trim
                 (with-temp-buffer
@@ -399,7 +398,7 @@ Shows status in the minibuffer.  On failure, suggests enabling
   (flywrite--log "Connection test: starting")
   (condition-case err
       (let* ((_ (unless flywrite-api-url
-                  (error "flywrite-api-url is not set.  Try M-x customize-variable flywrite-api-url")))
+                  (error "Set flywrite-api-url before testing.  Try M-x customize-variable flywrite-api-url")))
              (text "The quick brown fox jumped over the lazy dog.")
              (api-key (flywrite--get-api-key))
              (anthropic-p (flywrite--anthropic-api-p))
@@ -477,7 +476,7 @@ HASH is the content hash at time of dispatch for stale checking."
       (flywrite--log "Skipping already-checked hash=%s" hash)
     (unless flywrite-api-url
       (flywrite--log "ERROR: flywrite-api-url is not set")
-      (error "flywrite-api-url is not set.  See the README for configuration"))
+      (error "Set flywrite-api-url before use.  See the README for configuration"))
     (let* ((text (with-current-buffer buf
                     (buffer-substring-no-properties beg end)))
            (api-key (flywrite--get-api-key))
@@ -813,7 +812,7 @@ Prompts for confirmation when the count exceeds
 `flywrite-check-confirm-threshold'."
   (interactive)
   (unless flywrite-mode
-    (user-error "flywrite-mode is not enabled"))
+    (user-error "Flywrite-mode is not enabled"))
   (let ((units (flywrite--collect-units-in-region (point-min) (point-max))))
     (when (and (> (length units) flywrite-check-confirm-threshold)
                (not (y-or-n-p (format "Check %d sentences? " (length units)))))
@@ -834,12 +833,12 @@ Prompts for confirmation when the count exceeds
       (message "flywrite: queued %d sentences for checking" count))))
 
 (defun flywrite-check-region (beg end)
-  "Queue all sentences in the region for checking.
+  "Queue all sentences between BEG and END for checking.
 Prompts for confirmation when the count exceeds
 `flywrite-check-confirm-threshold'."
   (interactive "r")
   (unless flywrite-mode
-    (user-error "flywrite-mode is not enabled"))
+    (user-error "Flywrite-mode is not enabled"))
   (unless (use-region-p)
     (user-error "No active region"))
   (let ((units (flywrite--collect-units-in-region beg end)))
@@ -870,7 +869,7 @@ Prompts for confirmation when the count exceeds
 Respects `flywrite-granularity'."
   (interactive)
   (unless flywrite-mode
-    (user-error "flywrite-mode is not enabled"))
+    (user-error "Flywrite-mode is not enabled"))
   (let* ((bounds (flywrite--unit-bounds-at-pos (point)))
          (ubeg (car bounds))
          (uend (cdr bounds))

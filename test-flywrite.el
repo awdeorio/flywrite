@@ -688,7 +688,7 @@
       (with-temp-buffer
         (text-mode)
         (flywrite-mode 1)
-        (should (string-match-p "flywrite-api-url is not set" last-msg))
+        (should (string-match-p "Set flywrite-api-url before testing" last-msg))
         (flywrite-mode -1)))))
 
 (ert-deftest flywrite-test-connection-test-no-api-key-anthropic ()
