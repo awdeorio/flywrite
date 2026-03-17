@@ -381,7 +381,7 @@ Shows status in the minibuffer.  On failure, suggests enabling
                             `(("Authorization" . ,(concat "Bearer " api-key))))))
                       flywrite-api-headers))
              (url-request-data (encode-coding-string payload 'utf-8)))
-        (flywrite--log "Connection test: sending request to %s" flywrite-api-url)
+        (flywrite--log "Connection test: sending request to %s JSON=%s" flywrite-api-url payload)
         (url-retrieve
          flywrite-api-url
          (lambda (status)
@@ -393,12 +393,16 @@ Shows status in the minibuffer.  On failure, suggests enabling
                      (goto-char (point-min))
                      (unless (re-search-forward "\r?\n\r?\n" nil t)
                        (error "Malformed HTTP response"))
-                     (json-read)
-                     (flywrite--log "Connection test: success")
+                     (let ((json-data (json-read)))
+                       (flywrite--log "Connection test response: success JSON=%S" json-data))
                      (message "flywrite: connection test success"))
                  (error
-                  (flywrite--log "Connection test failed: %s"
-                                  (error-message-string cb-err))
+                  (flywrite--log "Connection test failed: %s JSON=%s"
+                                  (error-message-string cb-err)
+                                  (ignore-errors
+                                    (goto-char (point-min))
+                                    (when (re-search-forward "\r?\n\r?\n" nil t)
+                                      (buffer-substring-no-properties (point) (point-max)))))
                   (message "flywrite: connection test failed: %s.  Enable `flywrite-debug' and check *flywrite-log* for details."
                            (error-message-string cb-err))))
              (kill-buffer (current-buffer))))
@@ -549,8 +553,8 @@ request.  START-TIME is used for latency logging."
                                     (message (and choice (alist-get 'message choice))))
                                (and message (alist-get 'content message))))))
 
-                (flywrite--log "Response: HTTP %s %.2fs hash=%s"
-                               (or http-status "?") latency hash)
+                (flywrite--log "Response: HTTP %s %.2fs hash=%s JSON=%S"
+                               (or http-status "?") latency hash json-data)
 
                 (unless text
                   (flywrite--log "Response had no extractable text, skipping hash=%s json=%S"
