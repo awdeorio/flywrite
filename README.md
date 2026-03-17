@@ -50,15 +50,15 @@ Configure.
 ```
 </details>
 
-Open a text file and save this content (it contains intentional errors for flywrite to catch):
+Open a text file and save this content with intentional errors:
 
 > The quick brown fox jumpted over the lazy dog. Him and his friend went to the store to buy some grocerys. The weather was very extremely hot outside yesterday.
 
-Run `M-x flywrite-mode`.  Try checking the entire buffer with `M-x flywrite-check-buffer`.  Move the point over one of the wavy underlines.
+Run `M-x flywrite-mode`.  By default, flywrite will check sentences around the point.  Responses may take a few seconds.  Move the point over one of the wavy underlines.
 
 ![flywrite-mode screenshot](screenshot.png)
 
-Now try adding new text.  New sentences are checked after a short delay.
+Add text.  As you move or type, flywrite will automatically run checks after a short idle delay.
 
 ## Configuration
 
@@ -90,8 +90,6 @@ Set `flywrite-api-url` to your provider's endpoint. Flywrite natively supports t
 
 Note: Smaller local models may struggle to consistently return valid JSON in the expected format, leading to "LLM returned invalid JSON" messages. Larger models (7B+) tend to be more reliable. Enable `flywrite-debug` and check `*flywrite-log*` to see raw responses.
 
-Anthropic endpoints are auto-detected (by hostname) and use the `x-api-key` header; all other providers use a `Bearer` token in the `Authorization` header. Local providers like Ollama work without an API key.
-
 ### API key
 Choose one method:
 1. Read from a file (recommended): `(setq flywrite-api-key-file "~/.flywrite-api-key")` — use `chmod 600` to restrict access
@@ -99,6 +97,8 @@ Choose one method:
 3. Use `FLYWRITE_API_KEY` environment variable (no config needed)
 
 Omit the API key if it's not needed, e.g., for Ollama.
+
+Anthropic endpoints are auto-detected (by hostname) and use the `x-api-key` header; all other providers use a `Bearer` token in the `Authorization` header. Local providers like Ollama work without an API key.  Custom headers are also supported with the `flywrite-api-headers` (see [Optional settings](#optional-settings)).
 
 ### Optional settings
 Settings with defaults.
@@ -114,7 +114,6 @@ Settings with defaults.
 ```
 
 ### System prompt
-
 Customize `flywrite-system-prompt` to change tone, strictness, or focus areas. The prompt must instruct the model to return JSON with a `suggestions` array where each element has `quote` and `reason` keys. The default is:
 
 ```elisp
@@ -139,7 +138,6 @@ Rules:
 ### Popup explanations
 For the best experience, install [flymake-popon](https://github.com/akicho8/flymake-popon) to see suggestion explanations as inline popups near the flagged text (included in the [Quick start](#quick-start) config). Without it, suggestions are shown in the echo area when point is on a diagnostic.
 
-
 ## Usage
 
 Enable the mode in any buffer:
@@ -148,7 +146,7 @@ Enable the mode in any buffer:
 M-x flywrite-mode
 ```
 
-As you move or type, flywrite will automatically check sentences after a short idle delay and underline issues with suggestions.
+As you move or type, flywrite will automatically run checks after a short idle delay and underline issues with suggestions.
 
 ### Commands
 
