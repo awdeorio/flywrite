@@ -61,6 +61,65 @@ Run `M-x flywrite-mode`.  As you move or type, flywrite will automatically run c
 
 ## Configuration
 
+### Optional settings
+Settings with defaults.
+
+```elisp
+(setq flywrite-idle-delay 1.5)                     ; seconds before checking
+(setq flywrite-max-concurrent 3)                   ; max parallel API calls
+(setq flywrite-granularity 'sentence)              ; 'sentence or 'paragraph
+(setq flywrite-system-prompt 'academic)            ; 'prose, 'academic, or custom string
+(setq flywrite-eager t)                            ; eagerly check around point
+(setq flywrite-debug t)                            ; log to *flywrite-log* (on by default)
+(setq flywrite-test-on-load t)                     ; connection test on enable
+```
+
+### System prompt
+`flywrite-system-prompt` controls the instructions sent with every API call. It accepts a symbol selecting a built-in style or a custom string. Built-in styles:
+
+| Symbol | Description |
+|--------|-------------|
+| `prose` | General grammar, clarity, and style feedback |
+| `academic` | Everything in `prose` plus rules for formal academic writing (the default) |
+
+Select a built-in style:
+```elisp
+(setq flywrite-system-prompt 'prose)  ; or 'academic (the default)
+```
+
+Or provide a custom string. The prompt must instruct the model to return JSON with a `suggestions` array where each element has `quote` and `reason` keys:
+```elisp
+(setq flywrite-system-prompt
+  "You are a writing assistant. Analyze the sentence for grammar, clarity, and style.
+Return JSON only. No text outside the JSON.
+
+If the sentence is fine:
+{\"suggestions\": []}
+
+If there are issues:
+{\"suggestions\": [{\"quote\": \"exact substring\", \"reason\": \"brief explanation\"}]}
+
+Rules:
+- \"quote\" must be an exact substring of the input
+- Keep reasons under 12 words
+- One entry per distinct issue
+- Do not flag correct sentences
+- Ignore markup and formatting commands (LaTeX, HTML, Org-mode, etc.) -- only evaluate the prose content")
+```
+
+The `academic` style adds these rules to the `prose` prompt:
+- Flag informal language, contractions, and colloquialisms
+- Flag vague hedging (e.g., 'a lot', 'things', 'stuff', 'really')
+- Flag first person when it weakens objectivity (e.g., 'I think', 'we feel')
+- Flag unsupported superlatives (e.g., 'the best', 'the most important')
+- Flag wordiness and nominalizations (e.g., 'make an adjustment' -> 'adjust')
+- Flag subjective qualifiers (e.g., 'obviously', 'clearly', 'of course')
+- Flag ambiguous 'this/it/they' pronouns without antecedents (e.g., 'This is important' — this what?)
+- Flag weasel words (e.g., 'significantly' without statistical context, 'often', 'usually' without citation)
+- Flag informal transitions (e.g., 'So,', 'Also,', 'Plus') — prefer 'Therefore', 'Additionally', 'Moreover'
+
+**Note on prompt length:** Longer system prompts increase token usage and cost per API call. Anthropic's prompt caching (`flywrite-enable-caching`, on by default) mitigates this by caching the system prompt across calls, but other providers may not offer caching. If cost is a concern, keep your system prompt concise.
+
 ### API providers
 Configure an API.  Flywrite natively supports the Anthropic Messages API and the OpenAI Chat Completions API, which includes Google Gemini and Ollama.
 
@@ -150,65 +209,6 @@ Choose one method:
 4. Omit the API key if it's not needed, e.g., for Ollama.
 
 Anthropic endpoints are auto-detected by hostname and use the `x-api-key` header; all other providers use a `Bearer` token in the `Authorization` header. Local providers like Ollama work without an API key.
-
-### Optional settings
-Settings with defaults.
-
-```elisp
-(setq flywrite-idle-delay 1.5)                     ; seconds before checking
-(setq flywrite-max-concurrent 3)                   ; max parallel API calls
-(setq flywrite-granularity 'sentence)              ; 'sentence or 'paragraph
-(setq flywrite-system-prompt 'academic)            ; 'prose, 'academic, or custom string
-(setq flywrite-eager t)                            ; eagerly check around point
-(setq flywrite-debug t)                            ; log to *flywrite-log* (on by default)
-(setq flywrite-test-on-load t)                     ; connection test on enable
-```
-
-### System prompt
-`flywrite-system-prompt` controls the instructions sent with every API call. It accepts a symbol selecting a built-in style or a custom string. Built-in styles:
-
-| Symbol | Description |
-|--------|-------------|
-| `prose` | General grammar, clarity, and style feedback |
-| `academic` | Everything in `prose` plus rules for formal academic writing (the default) |
-
-Select a built-in style:
-```elisp
-(setq flywrite-system-prompt 'prose)  ; or 'academic (the default)
-```
-
-Or provide a custom string. The prompt must instruct the model to return JSON with a `suggestions` array where each element has `quote` and `reason` keys:
-```elisp
-(setq flywrite-system-prompt
-  "You are a writing assistant. Analyze the sentence for grammar, clarity, and style.
-Return JSON only. No text outside the JSON.
-
-If the sentence is fine:
-{\"suggestions\": []}
-
-If there are issues:
-{\"suggestions\": [{\"quote\": \"exact substring\", \"reason\": \"brief explanation\"}]}
-
-Rules:
-- \"quote\" must be an exact substring of the input
-- Keep reasons under 12 words
-- One entry per distinct issue
-- Do not flag correct sentences
-- Ignore markup and formatting commands (LaTeX, HTML, Org-mode, etc.) -- only evaluate the prose content")
-```
-
-The `academic` style adds these rules to the `prose` prompt:
-- Flag informal language, contractions, and colloquialisms
-- Flag vague hedging (e.g., 'a lot', 'things', 'stuff', 'really')
-- Flag first person when it weakens objectivity (e.g., 'I think', 'we feel')
-- Flag unsupported superlatives (e.g., 'the best', 'the most important')
-- Flag wordiness and nominalizations (e.g., 'make an adjustment' -> 'adjust')
-- Flag subjective qualifiers (e.g., 'obviously', 'clearly', 'of course')
-- Flag ambiguous 'this/it/they' pronouns without antecedents (e.g., 'This is important' — this what?)
-- Flag weasel words (e.g., 'significantly' without statistical context, 'often', 'usually' without citation)
-- Flag informal transitions (e.g., 'So,', 'Also,', 'Plus') — prefer 'Therefore', 'Additionally', 'Moreover'
-
-**Note on prompt length:** Longer system prompts increase token usage and cost per API call. Anthropic's prompt caching (`flywrite-enable-caching`, on by default) mitigates this by caching the system prompt across calls, but other providers may not offer caching. If cost is a concern, keep your system prompt concise.
 
 ### Popup explanations
 For the best experience, install [flymake-popon](https://github.com/akicho8/flymake-popon) to see suggestion explanations as inline popups near the flagged text (included in the [Quick start](#quick-start) config). Without it, suggestions are shown in the echo area when point is on a diagnostic.
