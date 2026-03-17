@@ -1,6 +1,6 @@
 # flywrite-mode
 
-An Emacs minor mode for grammar, style, and clarity feedback. Like Flyspell, but powered by an LLM. One file, no dependencies. Suggestions appear as flymake diagnostics with inline explanations.
+An Emacs minor mode for grammar, style, and academic writing feedback. Like Flyspell, but powered by an LLM. One file, no dependencies. Suggestions appear as flymake diagnostics with inline explanations.
 
 **Privacy warning:** Flywrite sends your document text to an LLM API.
 
@@ -56,7 +56,7 @@ Configure.
 
 Open a text file and save this content with intentional errors:
 
-> The quick brown fox jumpted over the lazy dog. Him and his friend went to the store to buy some grocerys. The weather was very extremely hot outside yesterday.
+> The optimization had a significant affect on runtime performance. The benchmarks show the approach is more efficient then brute force search. We feel the results are promising.
 
 Run `M-x flywrite-mode`.  As you move or type, flywrite will automatically run checks after a short idle delay.  API responses may take a few seconds.  Move the point over one of the wavy underlines.
 

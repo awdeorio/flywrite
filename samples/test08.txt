@@ -1,0 +1,1 @@
+The optimization had a significant affect on runtime performance. The benchmarks show the approach is more efficient then brute force search. We feel the results are promising.
