@@ -953,12 +953,16 @@ Eglot replaces the buffer-local value with only its own backend."
         (run-with-idle-timer flywrite-idle-delay t
                              #'flywrite--idle-timer-fn (current-buffer)))
 
-  (flywrite--log "flywrite-mode enabled in %s (emacs %s, url=%s, model=%s, granularity=%s, idle=%.1f, max-concurrent=%d, eager=%s, caching=%s)"
+  (flywrite--log "flywrite-mode enabled in %s (emacs %s, url=%s, model=%s, granularity=%s, idle=%.1f, max-concurrent=%d, eager=%s, caching=%s, prompt=%s)"
                  (buffer-name) emacs-version
                  (or flywrite-api-url "nil")
                  flywrite-model flywrite-granularity
                  flywrite-idle-delay flywrite-max-concurrent
-                 flywrite-eager flywrite-enable-caching)
+                 flywrite-eager flywrite-enable-caching
+                 (if (symbolp flywrite-system-prompt)
+                     flywrite-system-prompt
+                   "custom"))
+  (flywrite--log "System prompt:\n%s" (flywrite--get-system-prompt))
 
   ;; Test API connection on startup
   (when flywrite-test-on-load
