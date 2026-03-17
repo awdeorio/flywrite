@@ -12,7 +12,7 @@ Get an Anthropic API key at https://console.anthropic.com/settings/keys and save
 
 Add credits at https://platform.claude.com/settings/billing — as of Spring 2026, $5 should last months of typical use.
 
-Configure (Emacs 30+).
+Add to your init file (Emacs 30+):
 ```elisp
 (use-package flywrite-mode
   :ensure t
@@ -180,7 +180,7 @@ $ chmod 600 ~/.flywrite-api-key
    (setq flywrite-model "llama3.2:3b")
    ```
 
-Note: Smaller models may not consistently return valid JSON in the expected format, leading to "LLM returned invalid JSON" messages. Larger models (7B+) tend to be more reliable. Enable `flywrite-debug` and check `*flywrite-log*` to see raw responses.
+Note: Smaller models may not consistently return valid JSON in the expected format, leading to "LLM returned invalid JSON" messages. Larger models (7B+) tend to be more reliable. Check `*flywrite-log*` to see raw responses.
 
 **Any API provider**
 ```elisp
@@ -240,11 +240,11 @@ Run any command with `M-x`. No default keybindings are provided — bind them yo
 ## Troubleshooting
 
 **Connection test fails on startup**
-Flywrite tests the API connection when the mode is enabled. If you see "connection test failed" in the minibuffer, enable `flywrite-debug` and check `*flywrite-log*` for details. Verify `flywrite-api-url` and your API key are configured correctly. To disable the startup test: `(setq flywrite-test-on-load nil)`.
+Flywrite tests the API connection when the mode is enabled. If you see "connection test failed" in the minibuffer, check `*flywrite-log*` for details. Verify `flywrite-api-url` and your API key are configured correctly. To disable the startup test: `(setq flywrite-test-on-load nil)`.
 
 **Nothing happens / no underlines appear**
 1. Make sure `flywrite-mode` is active: check the mode line for `flywrite`.
-2. Enable debug logging with `(setq flywrite-debug t)` and check the `*flywrite-log*` buffer for errors.
+2. Check the `*flywrite-log*` buffer for errors.
 3. Verify your API key is set correctly — `M-: (flywrite--get-api-key)` should return your key.
 4. Verify your API URL is set — `M-: flywrite-api-url` should return a URL.
 5. Try `M-x flywrite-check-buffer` to force a check on existing text.
@@ -278,11 +278,4 @@ The `samples/` directory contains files for manual testing in Emacs. Open a file
 | `test07.txt` | Two paragraphs: general errors (flagged by `prose`), then academic-only errors (flagged by `academic`) |
 
 ## Debugging
-
-Enable debug logging:
-
-```elisp
-(setq flywrite-debug t)
-```
-
-Then check the `*flywrite-log*` buffer for API calls, responses, latency, and events.
+Debug logging is on by default. Check *flywrite-log* for API calls, responses, and events.
