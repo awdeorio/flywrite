@@ -16,7 +16,7 @@ Configure (Emacs 30+).
 ```elisp
 (use-package flywrite-mode
   :ensure t
-  :vc (:url "https://github.com/awdeorio/flywrite" :branch "main")
+  :vc (:url "https://github.com/awdeorio/flywrite" :branch "main" :rev :newest)
   :commands (flywrite-mode)
   :config
   (setq flywrite-api-url "https://api.anthropic.com/v1/messages")
