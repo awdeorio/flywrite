@@ -28,8 +28,7 @@ check_quiet() {
 # Lint: checkdoc
 echo "Lint: checkdoc"
 check_quiet \
-  emacs \
-    -Q --batch \
+  emacs -Q --batch \
     --eval "(setq checkdoc-verb-check-experimental-flag nil)" \
     --eval "(checkdoc-file \"flywrite-mode.el\")" \
     --eval "(when (get-buffer \"*Warnings*\")
@@ -39,8 +38,7 @@ check_quiet \
 # Lint: elint
 echo "Lint: elint"
 check_quiet \
-  emacs \
-    -Q --batch \
+  emacs -Q --batch \
     --eval "(require 'elint)" \
     --eval "(elint-file \"flywrite-mode.el\")" \
     --eval "(with-current-buffer \"*Elint*\"
@@ -48,8 +46,7 @@ check_quiet \
 
 # Lint: elisp-lint (install from MELPA, disable checks run separately)
 echo "Lint: elisp-lint"
-emacs \
-  -Q --batch \
+emacs -Q --batch \
   --eval "(require 'package)" \
   --eval "(add-to-list 'package-archives '(\"melpa\" . \"https://melpa.org/packages/\") t)" \
   --eval "(package-initialize)" \
@@ -65,10 +62,16 @@ emacs \
   --no-fill-column \
   flywrite-mode.el
 
+# Lint: nesting depth (control-flow forms only, max depth 6)
+echo "Lint: nesting depth"
+check_quiet \
+  emacs -Q --batch \
+  -l lint-nesting.el \
+  flywrite-mode.el
+
 # Unit tests (filter expected flywrite log messages from stderr)
 echo "Unit tests"
-emacs \
-  -Q --batch \
+emacs -Q --batch \
   -l flywrite-mode.el \
   -l test-flywrite.el \
   -f ert-run-tests-batch-and-exit \
