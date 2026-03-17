@@ -17,14 +17,22 @@ This is a pure Emacs Lisp package with no build system and no external dependenc
 (load-file "/path/to/flywrite-mode.el")
 ```
 
-**Regression test** (byte-compile check + ERT unit tests):
+**Regression test** (linting + byte-compile + ERT unit tests):
 ```bash
 ./test
 ```
 
-**Byte-compile check** (catches warnings and errors without running Emacs interactively):
+The `./test` script runs these checks in order:
+1. **Byte-compile** with warnings-as-errors
+2. **checkdoc** — docstring style
+3. **elint** — Emacs Lisp lint
+4. **elisp-lint** — installed from MELPA on first run
+5. **Nesting depth** — custom `lint-nesting.el`, max control-flow depth of 6
+6. **ERT unit tests** — `test-flywrite.el`
+
+**Byte-compile check** (standalone):
 ```bash
-emacs -Q --batch -f batch-byte-compile flywrite-mode.el && rm -f flywrite-mode.elc
+emacs -Q --batch --eval "(setq byte-compile-error-on-warn t)" -f batch-byte-compile flywrite-mode.el && rm -f flywrite-mode.elc
 ```
 
 **Run a single ERT test by name:**
@@ -80,3 +88,4 @@ Key design decisions:
 - Package prefix: `flywrite-` (public), `flywrite--` (internal)
 - No default keybindings; commands available via `M-x`
 - Diagnostics are tagged with `[flywrite]` suffix in messages
+- Max control-flow nesting depth is 6 (enforced by `lint-nesting.el`; counted forms include `if`, `when`, `let`, `save-excursion`, `condition-case`, etc.)
