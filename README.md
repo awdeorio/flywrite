@@ -20,7 +20,8 @@ Configure (Emacs 30+).
   :commands (flywrite-mode)
   :config
   (setq flywrite-api-url "https://api.anthropic.com/v1/messages")
-  (setq flywrite-api-key-file "~/.flywrite-api-key"))
+  (setq flywrite-api-key-file "~/.flywrite-api-key")
+  (setq flywrite-debug t))  ; log to *flywrite-log*, recommended for beta
 
 (use-package flymake-popon
   :hook (flymake-mode . flymake-popon-mode)
