@@ -44,6 +44,8 @@ emacs -Q --batch -l flywrite-mode.el -l test-flywrite.el --eval '(ert-run-tests-
 
 **README consistency:** Default values shown in the README (including the system prompt) must match the source code in `flywrite-mode.el`. When changing defaults, update both.
 
+**Samples README consistency:** When adding, removing, or renaming files in `samples/`, update the table in `samples/README.md` to match.
+
 ## Architecture
 
 ```

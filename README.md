@@ -264,18 +264,7 @@ Run the regression tests:
 
 ### Manual end-to-end tests
 
-The `samples/` directory contains files for manual testing in Emacs. Open a file, run `M-x flywrite-mode`, and verify diagnostics appear as expected.
-
-| File | Description |
-|------|-------------|
-| `test00.txt` | Plain text with spelling, grammar, and style errors |
-| `test01.md` | Markdown with multiple paragraphs of errors plus clean prose |
-| `test02.tex` | LaTeX document with the same error paragraphs (should ignore markup) |
-| `test03.tex` | Long LaTeX exam document with heavy markup, lists, and math (stress test for markup suppression) |
-| `test04.tex` | Short LaTeX with an itemize list containing a spelling error |
-| `test05.md` | Markdown with headings, blockquotes, a code block, and errors (should skip code blocks) |
-| `test06.tex` | Minimal LaTeX exam with a solution block (should handle custom environments) |
-| `test07.txt` | Two paragraphs: general errors (flagged by `prose`), then academic-only errors (flagged by `academic`) |
+The `samples/` directory contains files for manual testing in Emacs. Open a file, run `M-x flywrite-mode`, and verify diagnostics appear as expected. See [`samples/README.md`](samples/README.md) for file descriptions.
 
 ## Debugging
 Debug logging is on by default. Check *flywrite-log* for API calls, responses, and events.
