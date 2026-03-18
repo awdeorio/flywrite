@@ -428,97 +428,12 @@ key is found (e.g., for local providers like Ollama)."
   (and flywrite-api-url
        (string-match-p "api\\.anthropic\\.com" flywrite-api-url)))
 
-(defun flywrite--test-connection ()
-  "Send a test request to verify the API connection.
-Shows status in the minibuffer.  On failure, suggests enabling
-`flywrite-debug' for troubleshooting."
-  (message "flywrite: testing connection")
-  (flywrite--log "Connection test: starting")
-  (condition-case err
-      (let* ((_ (unless flywrite-api-url
-                  (error "Set flywrite-api-url before testing.  Try M-x customize-variable flywrite-api-url")))
-             (text "The quick brown fox jumped over the lazy dog.")
-             (api-key (flywrite--get-api-key))
-             (anthropic-p (flywrite--anthropic-api-p))
-             (local-p (and flywrite-api-url
-                          (string-match-p "\\(?:localhost\\|127\\.0\\.0\\.1\\)" flywrite-api-url)))
-             (_ (when (and (not api-key) (not local-p))
-                  (error "API key is not set.  See the README for configuration")))
-             (prompt (flywrite--get-system-prompt))
-             (system-msg (if (and anthropic-p flywrite-enable-caching)
-                             `[((type . "text")
-                                (text . ,prompt)
-                                (cache_control . ((type . "ephemeral"))))]
-                           prompt))
-             (payload (json-encode
-                       (if anthropic-p
-                           `((model . ,flywrite-model)
-                             (max_tokens . 300)
-                             (system . ,system-msg)
-                             (messages . [((role . "user")
-                                           (content . ,text))]))
-                         `((model . ,flywrite-model)
-                           (max_tokens . 300)
-                           (messages . [((role . "system")
-                                         (content . ,prompt))
-                                        ((role . "user")
-                                         (content . ,text))])))))
-             (url-request-method "POST")
-             (url-request-extra-headers
-              (append `(("Content-Type" . "application/json")
-                        ,@(cond
-                           (anthropic-p
-                            `(("x-api-key" . ,api-key)
-                              ("anthropic-version" . "2023-06-01")))
-                           (api-key
-                            `(("Authorization" . ,(concat "Bearer " api-key))))))
-                      flywrite-api-headers))
-             (url-request-data (encode-coding-string payload 'utf-8)))
-        (flywrite--log "Connection test: sending request to %s JSON=%s" flywrite-api-url payload)
-        (url-retrieve
-         flywrite-api-url
-         (lambda (status)
-           (unwind-protect
-               (condition-case cb-err
-                   (progn
-                     (when (plist-get status :error)
-                       (error "API request failed: %s" (plist-get status :error)))
-                     (goto-char (point-min))
-                     (unless (re-search-forward "\r?\n\r?\n" nil t)
-                       (error "Malformed HTTP response"))
-                     (let ((json-data (json-read)))
-                       (flywrite--log "Connection test response: success JSON=%S" json-data))
-                     (message "flywrite: connection test success"))
-                 (error
-                  (flywrite--log "Connection test failed: %s JSON=%s"
-                                  (error-message-string cb-err)
-                                  (ignore-errors
-                                    (goto-char (point-min))
-                                    (when (re-search-forward "\r?\n\r?\n" nil t)
-                                      (buffer-substring-no-properties (point) (point-max)))))
-                  (message "flywrite: connection test failed: %s.  Enable `flywrite-debug' and check *flywrite-log* for details."
-                           (error-message-string cb-err))))
-             (kill-buffer (current-buffer))))
-         nil t t))
-    (error
-     (flywrite--log "Connection test failed: %s" (error-message-string err))
-     (message "flywrite: connection test failed: %s.  Enable `flywrite-debug' and check *flywrite-log* for details."
-              (error-message-string err)))))
-
-(defun flywrite--send-request (buf beg end hash)
-  "Send an API request for the text in BUF between BEG and END.
-HASH is the content hash at time of dispatch for stale checking."
-  ;; Skip if already checked (catches duplicates from queue)
-  (if (with-current-buffer buf
-        (gethash hash flywrite--checked-sentences))
-      (flywrite--log "Skipping already-checked hash=%s" hash)
-    (unless flywrite-api-url
-      (flywrite--log "ERROR: flywrite-api-url is not set")
-      (error "Set flywrite-api-url before use.  See the README for configuration"))
-    (let* ((text (with-current-buffer buf
-                    (buffer-substring-no-properties beg end)))
-           (api-key (flywrite--get-api-key))
-         (anthropic-p (flywrite--anthropic-api-p))
+(defun flywrite--build-request (text api-key)
+  "Build an API request for TEXT, returning (PAYLOAD . HEADERS).
+PAYLOAD is a JSON-encoded string.  HEADERS is an alist suitable
+for `url-request-extra-headers'.  API-KEY may be nil for local
+providers."
+  (let* ((anthropic-p (flywrite--anthropic-api-p))
          (prompt (flywrite--get-system-prompt))
          (system-msg (if (and anthropic-p flywrite-enable-caching)
                          `[((type . "text")
@@ -538,20 +453,98 @@ HASH is the content hash at time of dispatch for stale checking."
                                      (content . ,prompt))
                                     ((role . "user")
                                      (content . ,text))])))))
-         (url-request-method "POST")
-         (url-request-extra-headers
+         (headers
           (append `(("Content-Type" . "application/json")
                     ,@(cond
                        (anthropic-p
-                        (unless api-key
-                          (error "Anthropic API requires an API key"))
                         `(("x-api-key" . ,api-key)
                           ("anthropic-version" . "2023-06-01")))
                        (api-key
                         `(("Authorization" . ,(concat "Bearer " api-key))))))
-                  flywrite-api-headers))
-         (url-request-data (encode-coding-string payload 'utf-8))
-         (start-time (current-time)))
+                  flywrite-api-headers)))
+    (cons payload headers)))
+
+(defun flywrite--test-connection ()
+  "Send a test request to verify the API connection.
+Shows status in the minibuffer.  On failure, suggests enabling
+`flywrite-debug' for troubleshooting."
+  (message "flywrite: testing connection")
+  (flywrite--log "Connection test: starting")
+  (condition-case err
+      ;; Validate configuration and build the request.
+      (let* ((_ (unless flywrite-api-url
+                  (error "Set flywrite-api-url before testing.  Try M-x customize-variable flywrite-api-url")))
+             (text "The quick brown fox jumped over the lazy dog.")
+             (api-key (flywrite--get-api-key))
+             (local-p (and flywrite-api-url
+                          (string-match-p "\\(?:localhost\\|127\\.0\\.0\\.1\\)" flywrite-api-url)))
+             (_ (when (and (not api-key) (not local-p))
+                  (error "API key is not set.  See the README for configuration")))
+             (request (flywrite--build-request text api-key))
+             (payload (car request))
+             (url-request-method "POST")
+             (url-request-extra-headers (cdr request))
+             (url-request-data (encode-coding-string payload 'utf-8)))
+
+        ;; Fire async request; callback reports success/failure.
+        (flywrite--log "Connection test: sending request to %s JSON=%s" flywrite-api-url payload)
+        (url-retrieve
+         flywrite-api-url
+         (lambda (status)
+           (unwind-protect
+               (condition-case cb-err
+
+                   ;; Success path: parse response JSON.
+                   (progn
+                     (when (plist-get status :error)
+                       (error "API request failed: %s" (plist-get status :error)))
+                     (goto-char (point-min))
+                     (unless (re-search-forward "\r?\n\r?\n" nil t)
+                       (error "Malformed HTTP response"))
+                     (let ((json-data (json-read)))
+                       (flywrite--log "Connection test response: success JSON=%S" json-data))
+                     (message "flywrite: connection test success"))
+
+                 ;; Failure path: log response body for debugging.
+                 (error
+                  (flywrite--log "Connection test failed: %s JSON=%s"
+                                  (error-message-string cb-err)
+                                  (ignore-errors
+                                    (goto-char (point-min))
+                                    (when (re-search-forward "\r?\n\r?\n" nil t)
+                                      (buffer-substring-no-properties (point) (point-max)))))
+                  (message "flywrite: connection test failed: %s.  Enable `flywrite-debug' and check *flywrite-log* for details."
+                           (error-message-string cb-err))))
+             (kill-buffer (current-buffer))))
+         nil t t))
+
+    ;; Synchronous errors (bad config, missing key, etc.).
+    (error
+     (flywrite--log "Connection test failed: %s" (error-message-string err))
+     (message "flywrite: connection test failed: %s.  Enable `flywrite-debug' and check *flywrite-log* for details."
+              (error-message-string err)))))
+
+(defun flywrite--send-request (buf beg end hash)
+  "Send an API request for the text in BUF between BEG and END.
+HASH is the content hash at time of dispatch for stale checking."
+  ;; Skip if already checked (catches duplicates from queue)
+  (if (with-current-buffer buf
+        (gethash hash flywrite--checked-sentences))
+      (flywrite--log "Skipping already-checked hash=%s" hash)
+    (unless flywrite-api-url
+      (flywrite--log "ERROR: flywrite-api-url is not set")
+      (error "Set flywrite-api-url before use.  See the README for configuration"))
+    (let* ((text (with-current-buffer buf
+                    (buffer-substring-no-properties beg end)))
+           (api-key (flywrite--get-api-key))
+           (_ (when (and (flywrite--anthropic-api-p) (not api-key))
+                (error "Anthropic API requires an API key")))
+           (request (flywrite--build-request text api-key))
+           (payload (car request))
+           (url-request-method "POST")
+           (url-request-extra-headers (cdr request))
+           (url-request-data (encode-coding-string payload 'utf-8))
+           (start-time (current-time)))
     (flywrite--log "API call: [%d-%d] buf=%s url=%s text=%.80s hash=%s"
                    beg end (buffer-name buf) flywrite-api-url text hash)
     (with-current-buffer buf
