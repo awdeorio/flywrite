@@ -12,6 +12,7 @@
 
 ;;;; ---- Content hashing ----
 
+
 (ert-deftest flywrite-test-content-hash-deterministic ()
   "Same content produces the same hash."
   (with-temp-buffer
@@ -20,6 +21,7 @@
           (h2 (flywrite--content-hash 1 (point-max))))
       (should (stringp h1))
       (should (string= h1 h2)))))
+
 
 (ert-deftest flywrite-test-content-hash-differs ()
   "Different content produces different hashes."
@@ -32,30 +34,37 @@
       (setq h2 (flywrite--content-hash 1 (point-max))))
     (should-not (string= h1 h2))))
 
+
 ;;;; ---- Anthropic API detection ----
+
 
 (ert-deftest flywrite-test-anthropic-api-p-yes ()
   "Detects Anthropic API URL."
   (let ((flywrite-api-url "https://api.anthropic.com/v1/messages"))
     (should (flywrite--anthropic-api-p))))
 
+
 (ert-deftest flywrite-test-anthropic-api-p-no ()
   "Non-Anthropic URL returns nil."
   (let ((flywrite-api-url "https://api.openai.com/v1/chat/completions"))
     (should-not (flywrite--anthropic-api-p))))
+
 
 (ert-deftest flywrite-test-anthropic-api-p-nil ()
   "Nil URL returns nil."
   (let ((flywrite-api-url nil))
     (should-not (flywrite--anthropic-api-p))))
 
+
 ;;;; ---- API key resolution ----
+
 
 (ert-deftest flywrite-test-get-api-key-direct ()
   "Direct key takes priority."
   (let ((flywrite-api-key "sk-test-123")
         (flywrite-api-key-file nil))
     (should (string= (flywrite--get-api-key) "sk-test-123"))))
+
 
 (ert-deftest flywrite-test-get-api-key-file ()
   "Key file is read when direct key is nil."
@@ -68,6 +77,7 @@
           (should (string= (flywrite--get-api-key) "sk-from-file")))
       (delete-file tmpfile))))
 
+
 (ert-deftest flywrite-test-get-api-key-file-strips-whitespace ()
   "Whitespace is stripped from key file."
   (let* ((tmpfile (make-temp-file "flywrite-test-key"))
@@ -79,6 +89,7 @@
           (should (string= (flywrite--get-api-key) "sk-trimmed")))
       (delete-file tmpfile))))
 
+
 (ert-deftest flywrite-test-get-api-key-nil ()
   "Returns nil when nothing is configured."
   (let ((flywrite-api-key nil)
@@ -88,7 +99,9 @@
     (setenv "FLYWRITE_API_KEY" nil)
     (should-not (flywrite--get-api-key))))
 
+
 ;;;; ---- Unit boundary detection ----
+
 
 (ert-deftest flywrite-test-sentence-bounds ()
   "Sentence boundaries are detected correctly."
@@ -101,6 +114,7 @@
                            (car bounds) (cdr bounds))
                           "First sentence."))))))
 
+
 (ert-deftest flywrite-test-paragraph-bounds ()
   "Paragraph boundaries are detected correctly."
   (let ((flywrite-granularity 'paragraph))
@@ -112,6 +126,7 @@
                                 (buffer-substring-no-properties
                                  (car bounds) (cdr bounds))))))))
 
+
 (ert-deftest flywrite-test-unit-bounds-nonempty ()
   "Unit bounds end >= beg (never negative-length)."
   (let ((flywrite-granularity 'sentence))
@@ -122,6 +137,7 @@
 
 ;;;; ---- Mode-aware suppression ----
 
+
 (ert-deftest flywrite-test-skip-prog-mode ()
   "Text in prog-mode buffers is skipped."
   (let ((flywrite-skip-modes '(prog-mode)))
@@ -129,6 +145,7 @@
       (emacs-lisp-mode)
       (insert "some text")
       (should (flywrite--should-skip-p 1)))))
+
 
 (ert-deftest flywrite-test-no-skip-text-mode ()
   "Text in text-mode buffers is not skipped."
@@ -138,7 +155,9 @@
       (insert "some text")
       (should-not (flywrite--should-skip-p 1)))))
 
+
 ;;;; ---- Dirty registry (after-change) ----
+
 
 (ert-deftest flywrite-test-after-change-marks-dirty ()
   "Editing text marks the containing sentence dirty."
@@ -150,6 +169,7 @@
     (flywrite--after-change 1 (point-max) 0)
     (should flywrite--dirty-registry)
     (flywrite-mode -1)))
+
 
 (ert-deftest flywrite-test-after-change-dedup ()
   "Same content hash is not re-dirtied after being checked."
@@ -166,6 +186,7 @@
 
 ;;;; ---- Clear ----
 
+
 (ert-deftest flywrite-test-clear-resets-state ()
   "flywrite-clear resets all buffer-local state."
   (with-temp-buffer
@@ -180,7 +201,9 @@
     (should (= (hash-table-count flywrite--checked-sentences) 0))
     (flywrite-mode -1)))
 
+
 ;;;; ---- Collect units in region ----
+
 
 (ert-deftest flywrite-test-collect-units-basic ()
   "Collecting units finds sentences in a region."
@@ -192,6 +215,7 @@
       (let ((units (flywrite--collect-units-in-region 1 (point-max))))
         (should (>= (length units) 2)))
       (flywrite-mode -1))))
+
 
 (ert-deftest flywrite-test-collect-units-skips-checked ()
   "Already-checked sentences are not collected."
@@ -206,7 +230,9 @@
         (should (= (length units) 0)))
       (flywrite-mode -1))))
 
+
 ;;;; ---- Mode enable/disable ----
+
 
 (ert-deftest flywrite-test-mode-enable-disable ()
   "Enabling and disabling the mode sets up and tears down state."
@@ -220,7 +246,9 @@
     (should-not flywrite-mode)
     (should-not flywrite--idle-timer)))
 
+
 ;;;; ---- Sentence boundaries with test file content (test00.txt) ----
+
 
 (ert-deftest flywrite-test-sentence-bounds-plain-text ()
   "Sentence detection in multi-sentence plain text (like test00.txt)."
@@ -240,6 +268,7 @@
         (should (string-match-p "The weather was"
                                 (buffer-substring-no-properties (car bounds) (cdr bounds))))))))
 
+
 (ert-deftest flywrite-test-collect-units-plain-text ()
   "Collect all sentences from multi-sentence plain text (test00.txt)."
   (let ((flywrite-granularity 'sentence))
@@ -251,7 +280,9 @@
         (should (= (length units) 3)))
       (flywrite-mode -1))))
 
+
 ;;;; ---- Paragraph boundaries with multi-paragraph content (test01.md) ----
+
 
 (ert-deftest flywrite-test-paragraph-bounds-multi ()
   "Paragraph detection in multi-paragraph text (like test01.md)."
@@ -271,6 +302,7 @@
         (should (string-match-p "Their going"
                                 (buffer-substring-no-properties (car bounds) (cdr bounds))))))))
 
+
 (ert-deftest flywrite-test-collect-units-paragraphs ()
   "Collect paragraph units from multi-paragraph content."
   (let ((flywrite-granularity 'paragraph))
@@ -282,7 +314,9 @@
         (should (= (length units) 3)))
       (flywrite-mode -1))))
 
+
 ;;;; ---- LaTeX content (test02.tex, test04.tex) ----
+
 
 (ert-deftest flywrite-test-sentence-bounds-latex ()
   "Sentence detection works inside LaTeX document body (test02.tex)."
@@ -293,6 +327,7 @@
       (let ((bounds (flywrite--unit-bounds-at-pos 20)))
         (should (string-match-p "quick brown fox"
                                 (buffer-substring-no-properties (car bounds) (cdr bounds))))))))
+
 
 (ert-deftest flywrite-test-collect-units-latex-prose ()
   "Collect units from LaTeX prose, ignoring preamble-like lines."
@@ -305,7 +340,9 @@
         (should (= (length units) 2)))
       (flywrite-mode -1))))
 
+
 ;;;; ---- Content hashing with different formats ----
+
 
 (ert-deftest flywrite-test-hash-ignores-surrounding-whitespace-in-buffer ()
   "Hash depends on exact buffer content between positions."
@@ -319,6 +356,7 @@
     ;; Different because the buffer content differs
     (should-not (string= h1 h2))))
 
+
 (ert-deftest flywrite-test-hash-subregion ()
   "Hash of a subregion differs from hash of the whole buffer."
   (with-temp-buffer
@@ -327,7 +365,9 @@
           (h-part (flywrite--content-hash 1 16)))
       (should-not (string= h-all h-part)))))
 
+
 ;;;; ---- Dirty registry with realistic edits ----
+
 
 (ert-deftest flywrite-test-after-change-multi-sentence ()
   "After-change with multiple sentences marks at least one dirty."
@@ -338,6 +378,7 @@
     (flywrite--after-change 1 17 0)
     (should flywrite--dirty-registry)
     (flywrite-mode -1)))
+
 
 (ert-deftest flywrite-test-after-change-replaces-overlapping ()
   "A second change to the same region replaces the dirty entry."
@@ -352,6 +393,7 @@
       (should (= (length flywrite--dirty-registry) count-before)))
     (flywrite-mode -1)))
 
+
 (ert-deftest flywrite-test-dirty-registry-cleared-on-disable ()
   "Disabling the mode clears the dirty registry."
   (with-temp-buffer
@@ -363,7 +405,9 @@
     (flywrite-mode -1)
     (should-not flywrite--dirty-registry)))
 
+
 ;;;; ---- Skip detection ----
+
 
 (ert-deftest flywrite-test-skip-faces ()
   "Text with code-related font-lock faces is skipped."
@@ -375,6 +419,7 @@
       (put-text-property 1 15 'face 'font-lock-comment-face)
       (should (flywrite--should-skip-p 1)))))
 
+
 (ert-deftest flywrite-test-skip-markdown-code-face ()
   "Text with markdown-code-face is skipped."
   (let ((flywrite-skip-modes nil))
@@ -384,6 +429,7 @@
       (put-text-property 1 (point-max) 'face 'markdown-code-face)
       (should (flywrite--should-skip-p 1)))))
 
+
 (ert-deftest flywrite-test-no-skip-plain-text ()
   "Plain text without special faces is not skipped."
   (let ((flywrite-skip-modes nil))
@@ -391,6 +437,7 @@
       (text-mode)
       (insert "Normal prose text here.")
       (should-not (flywrite--should-skip-p 1)))))
+
 
 (ert-deftest flywrite-test-skip-list-face ()
   "Text with face as a list is checked correctly."
@@ -402,6 +449,7 @@
       (should (flywrite--should-skip-p 1)))))
 
 ;;;; ---- Collect units deduplication ----
+
 
 (ert-deftest flywrite-test-collect-units-no-duplicates ()
   "Collecting units does not produce duplicate entries for the same position."
@@ -416,6 +464,7 @@
         (should (= (length begs) (length (delete-dups (copy-sequence begs))))))
       (flywrite-mode -1))))
 
+
 (ert-deftest flywrite-test-collect-units-empty-buffer ()
   "Collecting units in an empty buffer returns nil."
   (let ((flywrite-granularity 'sentence))
@@ -426,7 +475,9 @@
         (should (= (length units) 0)))
       (flywrite-mode -1))))
 
+
 ;;;; ---- Flymake backend ----
+
 
 (ert-deftest flywrite-test-flymake-backend-stores-report-fn ()
   "The flymake backend stores the report function."
@@ -438,6 +489,7 @@
       (should called)
       (should flywrite--report-fn))
     (flywrite-mode -1)))
+
 
 (ert-deftest flywrite-test-flymake-backend-reports-existing-diags ()
   "The flymake backend reports existing diagnostics immediately."
@@ -453,7 +505,9 @@
       (should (= (length reported) 1)))
     (flywrite-mode -1)))
 
+
 ;;;; ---- API key env var ----
+
 
 (ert-deftest flywrite-test-get-api-key-env ()
   "Falls back to FLYWRITE_API_KEY env var."
@@ -461,6 +515,7 @@
         (flywrite-api-key-file nil)
         (process-environment (cons "FLYWRITE_API_KEY=sk-env-123" process-environment)))
     (should (string= (flywrite--get-api-key) "sk-env-123"))))
+
 
 (ert-deftest flywrite-test-api-key-priority ()
   "Direct key takes priority over file and env var."
@@ -474,7 +529,9 @@
           (should (string= (flywrite--get-api-key) "sk-direct")))
       (delete-file tmpfile))))
 
+
 ;;;; ---- Drain queue ----
+
 
 (ert-deftest flywrite-test-drain-queue-skips-checked ()
   "Drain queue skips entries already in checked-sentences."
@@ -494,7 +551,9 @@
       (should-not flywrite--pending-queue))
     (flywrite-mode -1)))
 
+
 ;;;; ---- Logging ----
+
 
 (ert-deftest flywrite-test-log-when-debug ()
   "Logging writes to *flywrite-log* when debug is on."
@@ -505,6 +564,7 @@
                               (buffer-substring-no-properties 1 (point-max)))))
     (kill-buffer "*flywrite-log*")))
 
+
 (ert-deftest flywrite-test-log-silent-when-no-debug ()
   "Logging does nothing when debug is off."
   (let ((flywrite-debug nil))
@@ -513,7 +573,9 @@
     (flywrite--log "should not appear")
     (should-not (get-buffer "*flywrite-log*"))))
 
+
 ;;;; ---- Mode idempotency ----
+
 
 (ert-deftest flywrite-test-mode-enable-twice ()
   "Enabling the mode twice does not create duplicate timers."
@@ -526,6 +588,7 @@
       (should (eq flywrite--idle-timer timer1)))
     (flywrite-mode -1)))
 
+
 (ert-deftest flywrite-test-mode-disable-twice ()
   "Disabling the mode twice is harmless."
   (with-temp-buffer
@@ -536,7 +599,9 @@
     (should-not flywrite-mode)
     (should-not flywrite--idle-timer)))
 
+
 ;;;; ---- Connection cleanup on disable ----
+
 
 (ert-deftest flywrite-test-disable-kills-connection-buffers ()
   "Disabling the mode kills tracked connection buffers."
@@ -552,6 +617,7 @@
       (should-not (buffer-live-p fake-conn2))
       (should-not flywrite--connection-buffers))))
 
+
 (ert-deftest flywrite-test-disable-handles-dead-connection-buffers ()
   "Disabling the mode handles already-dead connection buffers gracefully."
   (with-temp-buffer
@@ -564,6 +630,7 @@
       (flywrite-mode -1)
       (should-not flywrite--connection-buffers))))
 
+
 (ert-deftest flywrite-test-connection-buffers-initialized ()
   "Connection buffers list is initialized on enable."
   (with-temp-buffer
@@ -572,7 +639,9 @@
     (should-not flywrite--connection-buffers)
     (flywrite-mode -1)))
 
+
 ;;;; ---- 429 rate limit handling ----
+
 
 (ert-deftest flywrite-test-429-keeps-hash-checked ()
   "A 429 error keeps the hash in checked-sentences to prevent retry."
@@ -593,6 +662,7 @@
       ;; Hash should still be checked (not removed)
       (should (gethash hash flywrite--checked-sentences)))
     (flywrite-mode -1)))
+
 
 (ert-deftest flywrite-test-429-clears-pending-queue ()
   "A 429 error clears the pending queue to stop hammering the API."
@@ -615,6 +685,7 @@
       (should-not flywrite--pending-queue))
     (flywrite-mode -1)))
 
+
 (ert-deftest flywrite-test-non-429-error-keeps-hash ()
   "Any error keeps the hash checked to prevent automatic retry."
   (with-temp-buffer
@@ -635,6 +706,7 @@
     (flywrite-mode -1)))
 
 ;;;; ---- Duplicate callback guard ----
+
 
 (ert-deftest flywrite-test-duplicate-callback-ignored ()
   "Second callback for the same request is ignored."
@@ -665,7 +737,9 @@
         (should (= flywrite--in-flight 0))))
     (flywrite-mode -1)))
 
+
 ;;;; ---- Connection test ----
+
 
 (ert-deftest flywrite-test-connection-test-disabled ()
   "Connection test is skipped when `flywrite-test-on-load' is nil."
@@ -677,6 +751,7 @@
       (flywrite-mode 1)
       (should flywrite-mode)
       (flywrite-mode -1))))
+
 
 (ert-deftest flywrite-test-connection-test-no-url ()
   "Connection test reports error when API URL is not set."
@@ -690,6 +765,7 @@
         (flywrite-mode 1)
         (should (string-match-p "Set flywrite-api-url before testing" last-msg))
         (flywrite-mode -1)))))
+
 
 (ert-deftest flywrite-test-connection-test-no-api-key-anthropic ()
   "Connection test reports error when Anthropic API key is missing."
@@ -708,6 +784,7 @@
         (should (string-match-p "API key is not set" last-msg))
         (flywrite-mode -1)))))
 
+
 (ert-deftest flywrite-test-connection-test-no-api-key-openai ()
   "Connection test reports error when OpenAI API key is missing."
   (let ((flywrite-test-on-load t)
@@ -724,6 +801,7 @@
         (flywrite-mode 1)
         (should (string-match-p "API key is not set" last-msg))
         (flywrite-mode -1)))))
+
 
 (ert-deftest flywrite-test-connection-test-no-api-key-gemini ()
   "Connection test reports error when Gemini API key is missing."
@@ -742,7 +820,9 @@
         (should (string-match-p "API key is not set" last-msg))
         (flywrite-mode -1)))))
 
+
 ;;;; ---- End-to-end: mock API ----
+
 
 (defun flywrite-test--make-response-buffer (json-body)
   "Create a buffer mimicking an HTTP 200 response with JSON-BODY string."
@@ -751,6 +831,7 @@
       (insert "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n"
               json-body))
     buf))
+
 
 (ert-deftest flywrite-test-e2e-mock-api ()
   "End-to-end: insert error, check, verify diagnostic, fix, re-check, verify clear."
@@ -830,12 +911,15 @@
 
       (flywrite-mode -1))))
 
+
 ;;;; ---- System prompt resolution ----
+
 
 (ert-deftest flywrite-test-prompt-prose-symbol ()
   "Symbol `prose' resolves to the prose prompt string."
   (let ((flywrite-system-prompt 'prose))
     (should (string= (flywrite--get-system-prompt) flywrite--prose-prompt))))
+
 
 (ert-deftest flywrite-test-prompt-academic-symbol ()
   "Symbol `academic' resolves to a string with academic-specific rules."
@@ -846,10 +930,12 @@
       (should (string-match-p "nominalizations" prompt))
       (should (string-match-p "weasel words" prompt)))))
 
+
 (ert-deftest flywrite-test-prompt-custom-string ()
   "A custom string passes through unchanged."
   (let ((flywrite-system-prompt "my custom prompt"))
     (should (string= (flywrite--get-system-prompt) "my custom prompt"))))
+
 
 (ert-deftest flywrite-test-prompt-unknown-symbol-errors ()
   "An unknown symbol signals an error."

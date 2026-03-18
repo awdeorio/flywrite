@@ -41,10 +41,12 @@
 
 ;;;; ---- Customization group & variables ----
 
+
 (defgroup flywrite nil
   "Inline writing suggestions via LLM."
   :group 'tools
   :prefix "flywrite-")
+
 
 (defcustom flywrite-api-key nil
   "API key for the LLM provider.
@@ -53,6 +55,7 @@ environment variable."
   :type '(choice (const :tag "Use file or env var" nil)
                  (string :tag "API key"))
   :group 'flywrite)
+
 
 (defcustom flywrite-api-key-file nil
   "Path to a file containing the LLM API key.
@@ -63,25 +66,30 @@ is nil, before falling back to the FLYWRITE_API_KEY env var."
                  (file :tag "Key file path"))
   :group 'flywrite)
 
+
 (defcustom flywrite-model "claude-sonnet-4-20250514"
   "Model to use for writing suggestions."
   :type 'string
   :group 'flywrite)
+
 
 (defcustom flywrite-idle-delay 1.5
   "Seconds of idle time before checking dirty sentences."
   :type 'number
   :group 'flywrite)
 
+
 (defcustom flywrite-max-concurrent 3
   "Maximum number of simultaneous in-flight API calls."
   :type 'integer
   :group 'flywrite)
 
+
 (defcustom flywrite-enable-caching t
   "Whether to send cache_control on the system prompt."
   :type 'boolean
   :group 'flywrite)
+
 
 (defcustom flywrite-granularity 'sentence
   "Unit of text to check: `sentence' or `paragraph'."
@@ -89,10 +97,12 @@ is nil, before falling back to the FLYWRITE_API_KEY env var."
                  (const :tag "Paragraph" paragraph))
   :group 'flywrite)
 
+
 (defcustom flywrite-check-confirm-threshold 50
   "Max API calls before `flywrite-check-buffer' prompts for confirmation."
   :type 'integer
   :group 'flywrite)
+
 
 (defcustom flywrite-long-sentence-threshold 500
   "Max characters per unit.
@@ -100,10 +110,12 @@ Longer units are passed through without truncation or splitting."
   :type 'integer
   :group 'flywrite)
 
+
 (defcustom flywrite-skip-modes '(prog-mode)
   "Major modes where checking is suppressed."
   :type '(repeat symbol)
   :group 'flywrite)
+
 
 (defcustom flywrite-api-headers nil
   "Extra HTTP headers to include in API requests.
@@ -116,6 +128,7 @@ Example for Anthropic:
   :type '(alist :key-type string :value-type string)
   :group 'flywrite)
 
+
 (defcustom flywrite-eager t
   "When non-nil, also check the paragraph at point after each idle delay.
 This allows reviewing existing text by moving the cursor through it,
@@ -123,10 +136,12 @@ without needing to edit."
   :type 'boolean
   :group 'flywrite)
 
+
 (defcustom flywrite-debug t
   "When non-nil, log API calls, responses, and events to `*flywrite-log*'."
   :type 'boolean
   :group 'flywrite)
+
 
 (defcustom flywrite-test-on-load t
   "When non-nil, test the API connection when `flywrite-mode' is enabled."
@@ -139,35 +154,46 @@ without needing to edit."
 
 ;;;; ---- Buffer-local state ----
 
+
 (defvar-local flywrite--dirty-registry nil
   "List of (beg end hash) triples for sentences needing a check.")
+
 
 (defvar-local flywrite--checked-sentences (make-hash-table :test 'equal)
   "Hash table mapping content-hash → t for already-checked sentences.")
 
+
 (defvar-local flywrite--in-flight 0
   "Counter of in-flight API requests.")
+
 
 (defvar-local flywrite--pending-queue nil
   "FIFO list of (buf beg end hash) entries waiting for an API slot.")
 
+
 (defvar-local flywrite--connection-buffers nil
   "List of active `url-retrieve' response buffers for cleanup.")
+
 
 (defvar-local flywrite--idle-timer nil
   "The idle timer object for this buffer.")
 
+
 (defvar-local flywrite--report-fn nil
   "The flymake report function, stored when the backend is invoked.")
 
+
 (defvar-local flywrite--diagnostics nil
   "List of active flymake diagnostics.")
+
 
 (defvar-local flywrite--region-hashes (make-hash-table :test 'equal)
   "Map from \"beg-end\" region key to the last-known content hash.
 Used by `after-change' to find and remove stale checked-sentence entries.")
 
+
 ;;;; ---- Constants ----
+
 
 (defcustom flywrite-api-url nil
   "LLM API endpoint URL.
@@ -176,6 +202,7 @@ configure it.  See the README for details."
   :type '(choice (const :tag "Not set" nil)
                  (string :tag "URL"))
   :group 'flywrite)
+
 
 (defconst flywrite--prose-prompt
   "You are a writing assistant. Analyze the sentence for grammar, clarity, and style.
@@ -194,6 +221,7 @@ Rules:
 - Do not flag correct sentences
 - Ignore markup and formatting commands (LaTeX, HTML, Org-mode, etc.) -- only evaluate the prose content"
   "System prompt for general prose writing feedback.")
+
 
 (defconst flywrite--academic-prompt
   "You are a writing assistant. Analyze the sentence for grammar, clarity, and style.
@@ -222,10 +250,12 @@ Rules:
 - Flag informal transitions (e.g., 'So,', 'Also,', 'Plus') -- prefer 'Therefore', 'Additionally', 'Moreover'"
   "System prompt for academic writing feedback.")
 
+
 (defconst flywrite--prompt-alist
   `((prose . ,flywrite--prose-prompt)
     (academic . ,flywrite--academic-prompt))
   "Alist mapping prompt style symbols to prompt strings.")
+
 
 (defcustom flywrite-system-prompt 'academic
   "System prompt sent with every API call.
@@ -242,6 +272,7 @@ while preserving the JSON output format."
                  (string :tag "Custom prompt"))
   :group 'flywrite)
 
+
 (defun flywrite--get-system-prompt ()
   "Return the system prompt string.
 If `flywrite-system-prompt' is a string, return it as-is.
@@ -256,7 +287,9 @@ If it is a symbol, look it up in `flywrite--prompt-alist'."
    (t (error "Variable flywrite-system-prompt must be a symbol or string, got: %S"
              flywrite-system-prompt))))
 
+
 ;;;; ---- Logging ----
+
 
 (defun flywrite--log (format-string &rest args)
   "Log to `*flywrite-log*' when `flywrite-debug' is non-nil.
@@ -269,6 +302,7 @@ FORMAT-STRING and ARGS are passed to `format'."
               "\n"))))
 
 ;;;; ---- Unit boundary helpers ----
+
 
 (defun flywrite--unit-bounds-at-pos (pos)
   "Return (beg . end) of the sentence or paragraph containing POS.
@@ -298,13 +332,17 @@ Respects `flywrite-granularity'."
         (when (< end beg) (setq end beg))
         (cons beg end)))))
 
+
 ;;;; ---- Hashing ----
+
 
 (defun flywrite--content-hash (beg end)
   "Compute MD5 hash of buffer text between BEG and END."
   (md5 (buffer-substring-no-properties beg end)))
 
+
 ;;;; ---- Mode-aware suppression ----
+
 
 (defun flywrite--should-skip-p (pos)
   "Return non-nil if text at POS should be skipped.
@@ -328,7 +366,9 @@ Checks font-lock faces and major mode."
                                  markdown-pre-face)))
                      faces))))))
 
+
 ;;;; ---- Change detection ----
+
 
 (defun flywrite--clear-unit-diagnostics (ubeg uend)
   "Remove diagnostics overlapping UBEG..UEND and re-report."
@@ -344,6 +384,7 @@ Checks font-lock faces and major mode."
                  flywrite--report-fn)
         (funcall flywrite--report-fn flywrite--diagnostics)))))
 
+
 (defun flywrite--update-region-hash (ubeg uend hash)
   "Update region hash for UBEG..UEND to HASH, clearing stale entries."
   (let* ((region-key (format "%d-%d" ubeg uend))
@@ -351,6 +392,7 @@ Checks font-lock faces and major mode."
     (when (and old-hash (not (string= old-hash hash)))
       (remhash old-hash flywrite--checked-sentences))
     (puthash region-key hash flywrite--region-hashes)))
+
 
 (defun flywrite--process-changed-unit (ubeg uend hash)
   "Process a single changed unit bounded by UBEG..UEND with content HASH."
@@ -384,6 +426,7 @@ Checks font-lock faces and major mode."
                      (buffer-substring-no-properties ubeg uend))
                     80 nil nil t))))
 
+
 (defun flywrite--after-change (beg end _len)
   "Hook for `after-change-functions'.  Marks dirty sentences.
 BEG and END are the changed region boundaries."
@@ -406,6 +449,7 @@ BEG and END are the changed region boundaries."
 
 ;;;; ---- API call ----
 
+
 (defun flywrite--read-api-key-file ()
   "Read and return the API key from `flywrite-api-key-file', or nil.
 Signal an error if the file is set but not readable."
@@ -420,6 +464,7 @@ Signal an error if the file is set but not readable."
                    (point-min) (line-end-position))))))
       (when (> (length key) 0) key))))
 
+
 (defun flywrite--get-api-key ()
   "Return the API key, or nil if none is configured.
 Checks `flywrite-api-key', then `flywrite-api-key-file', then
@@ -429,10 +474,12 @@ key is found (e.g., for local providers like Ollama)."
       (flywrite--read-api-key-file)
       (getenv "FLYWRITE_API_KEY")))
 
+
 (defun flywrite--anthropic-api-p ()
   "Return non-nil if `flywrite-api-url' points to the Anthropic API."
   (and flywrite-api-url
        (string-match-p "api\\.anthropic\\.com" flywrite-api-url)))
+
 
 (defun flywrite--build-request (text api-key)
   "Build an API request for TEXT, returning (PAYLOAD . HEADERS).
@@ -482,6 +529,7 @@ providers."
                         `(("Authorization" . ,(concat "Bearer " api-key))))))
                   flywrite-api-headers)))
     (cons payload headers)))
+
 
 (defun flywrite--test-connection ()
   "Send a test request to verify the API connection.
@@ -543,6 +591,7 @@ Shows status in the minibuffer.  On failure, suggests enabling
      (message "flywrite: connection test failed: %s.  Enable `flywrite-debug' and check *flywrite-log* for details."
               (error-message-string err)))))
 
+
 (defun flywrite--send-request (buf beg end hash)
   "Send an API request for the text in BUF between BEG and END.
 HASH is the content hash at time of dispatch for stale checking."
@@ -589,6 +638,7 @@ HASH is the content hash at time of dispatch for stale checking."
 
 ;;;; ---- Response handler helpers ----
 
+
 (defun flywrite--duplicate-callback-p (response-buf hash)
   "Return non-nil if RESPONSE-BUF callback was already handled.
 Marks the buffer as handled on first call.  HASH is for logging."
@@ -600,6 +650,7 @@ Marks the buffer as handled on first call.  HASH is for logging."
             t)
         (setq-local flywrite--response-handled t)
         nil))))
+
 
 (defun flywrite--check-http-error (status buf latency hash)
   "Signal an error if STATUS indicates an HTTP failure.
@@ -625,6 +676,7 @@ Clears the pending queue on 429 rate-limit errors."
                              (length flywrite--pending-queue) hash)
               (setq flywrite--pending-queue nil)))))
       (error "API request failed: %s" err-info))))
+
 
 (defun flywrite--extract-response-text ()
   "Parse the current response buffer and return the LLM text.
@@ -654,6 +706,7 @@ or nil if no text could be extracted.  Signals on malformed HTTP."
                      (and message (alist-get 'content message))))))
       (list http-status json-data text))))
 
+
 (defun flywrite--handle-stale-response (beg end hash)
   "Return non-nil if the response for BEG..END with HASH is stale.
 When stale, removes the old hash and re-dirties the region."
@@ -669,6 +722,7 @@ When stale, removes the old hash and re-dirties the region."
       (when (and new-hash (not (gethash new-hash flywrite--checked-sentences)))
         (push (list beg end new-hash) flywrite--dirty-registry)))
     t))
+
 
 (defun flywrite--apply-suggestions (buf beg end hash text)
   "Parse TEXT as suggestion JSON and create diagnostics in BUF.
@@ -705,6 +759,7 @@ BEG, END, HASH identify the checked region."
                     (error-message-string parse-err) hash text)
      (message "flywrite: LLM returned invalid JSON (not a bug in flywrite). Enable `flywrite-debug' and check *flywrite-log* for details."))))
 
+
 (defun flywrite--make-suggestion-diagnostic (buf beg region-text suggestion hash)
   "Create a diagnostic from SUGGESTION and add it to `flywrite--diagnostics'.
 BUF is the source buffer, BEG is the region start, REGION-TEXT is
@@ -724,6 +779,7 @@ the region content.  HASH is for logging."
                          diag-beg diag-end reason hash))
       (flywrite--log "Quote not found, skipping: %s hash=%s" quote-str hash))))
 
+
 (defun flywrite--report-to-flymake (hash)
   "Report `flywrite--diagnostics' to flymake.  HASH is for logging."
   (if flywrite--report-fn
@@ -736,7 +792,9 @@ the region content.  HASH is for logging."
     (when (bound-and-true-p flymake-mode)
       (flymake-start))))
 
+
 ;;;; ---- Response handler ----
+
 
 (defun flywrite--process-response (status buf beg end hash latency)
   "Process a non-duplicate API response in the response buffer.
@@ -755,6 +813,7 @@ Called with the response buffer current.  May signal on errors."
       (with-current-buffer buf
         (unless (flywrite--handle-stale-response beg end hash)
           (flywrite--apply-suggestions buf beg end hash text))))))
+
 
 (defun flywrite--handle-response (status buf beg end hash start-time)
   "Handle API response.
@@ -790,7 +849,9 @@ request.  START-TIME is used for latency logging."
         ;; Clean up response buffer
         (kill-buffer response-buf)))))
 
+
 ;;;; ---- Idle timer callback ----
+
 
 (defun flywrite--eager-scan ()
   "Add units from the paragraph around point to the dirty registry."
@@ -811,6 +872,7 @@ request.  START-TIME is used for latency logging."
     (error
      (flywrite--log "Error in eager scan: %s buf=%s"
                     (error-message-string err) (buffer-name)))))
+
 
 (defun flywrite--dispatch-entry (buf beg end hash seen)
   "Validate and dispatch or queue a single dirty entry.
@@ -841,6 +903,7 @@ SEEN is a hash table for deduplication within this batch."
             (append flywrite--pending-queue
                     (list (list buf beg end hash)))))))
 
+
 (defun flywrite--dispatch-dirty-registry (buf)
   "Snapshot and clear the dirty registry, dispatch or queue entries for BUF."
   ;; Snapshot-and-clear so new edits during dispatch go into a fresh registry.
@@ -853,6 +916,7 @@ SEEN is a hash table for deduplication within this batch."
                                  (nth 0 entry) (nth 1 entry) (nth 2 entry)
                                  seen)))))
 
+
 (defun flywrite--idle-timer-fn (buf)
   "Idle timer callback for buffer BUF.
 Snapshots and clears the dirty registry, dispatches or queues requests."
@@ -864,6 +928,7 @@ Snapshots and clears the dirty registry, dispatches or queues requests."
         (flywrite--dispatch-dirty-registry buf)))))
 
 ;;;; ---- Pending queue drain ----
+
 
 (defun flywrite--drain-queue ()
   "Dispatch pending requests when slots are available."
@@ -880,7 +945,9 @@ Snapshots and clears the dirty registry, dispatches or queues requests."
         (flywrite--log "Draining queue: [%d-%d] hash=%s" beg end hash)
         (flywrite--send-request buf beg end hash)))))
 
+
 ;;;; ---- Flymake backend ----
+
 
 (defun flywrite-flymake (report-fn &rest _args)
   "Flymake backend for flywrite.  Stores REPORT-FN for later use.
@@ -889,7 +956,9 @@ Reports any existing diagnostics immediately so flymake can display them."
   (setq flywrite--report-fn report-fn)
   (funcall report-fn flywrite--diagnostics))
 
+
 ;;;; ---- Interactive commands ----
+
 
 (defun flywrite--try-collect-unit (ubeg uend seen)
   "Return a (ubeg uend hash) triple if unit UBEG..UEND should be collected.
@@ -902,6 +971,7 @@ if the unit is empty, duplicate, already checked, or in a skip region."
       (unless (or (gethash hash flywrite--checked-sentences)
                   (flywrite--should-skip-p ubeg))
         (list ubeg uend hash)))))
+
 
 (defun flywrite--collect-units-in-region (beg end)
   "Collect all sentence/paragraph units in region BEG to END.
@@ -922,6 +992,7 @@ Returns a list of (unit-beg unit-end hash) triples."
           (goto-char (max (1+ (point)) uend))
           (skip-chars-forward " \t\n"))))
     (nreverse units)))
+
 
 (defun flywrite-check-buffer ()
   "Queue all sentences in the buffer for checking.
@@ -948,6 +1019,7 @@ Prompts for confirmation when the count exceeds
                           (nth 0 entry) (nth 1 entry)))
                         80 nil nil t)))
       (message "flywrite: queued %d sentences for checking" count))))
+
 
 (defun flywrite-check-region (beg end)
   "Queue all sentences between BEG and END for checking.
@@ -983,6 +1055,7 @@ Prompts for confirmation when the count exceeds
       ;; Dispatch immediately rather than waiting for idle timer
       (flywrite--idle-timer-fn (current-buffer)))))
 
+
 (defun flywrite-check-at-point ()
   "Queue the sentence or paragraph at point for checking.
 Respects `flywrite-granularity'."
@@ -1005,6 +1078,7 @@ Respects `flywrite-granularity'."
     ;; Dispatch immediately rather than waiting for idle timer
     (flywrite--idle-timer-fn (current-buffer))))
 
+
 (defun flywrite-clear ()
   "Clear all flywrite diagnostics and reset caches."
   (interactive)
@@ -1022,6 +1096,8 @@ Respects `flywrite-granularity'."
 ;;;; ---- Minor mode definition ----
 
 ;;;###autoload
+
+
 (define-minor-mode flywrite-mode
   "Minor mode for inline writing suggestions via LLM.
 Provides sentence-level grammar, clarity, and style feedback as
@@ -1037,6 +1113,7 @@ flymake diagnostics."
    (t
     (flywrite--enable))))
 
+
 (defun flywrite--ensure-flymake-backend ()
   "Ensure `flywrite-flymake' is in `flymake-diagnostic-functions'.
 Eglot replaces the buffer-local value with only its own backend."
@@ -1044,6 +1121,7 @@ Eglot replaces the buffer-local value with only its own backend."
              (not (memq #'flywrite-flymake flymake-diagnostic-functions)))
     (flywrite--log "Re-adding flywrite-flymake after eglot setup")
     (add-hook 'flymake-diagnostic-functions #'flywrite-flymake nil t)))
+
 
 (defun flywrite--enable ()
   "Set up flywrite-mode in the current buffer."
@@ -1089,6 +1167,7 @@ Eglot replaces the buffer-local value with only its own backend."
   ;; Verify the API connection works on startup
   (when flywrite-test-on-load
     (flywrite--test-connection)))
+
 
 (defun flywrite--disable ()
   "Tear down flywrite-mode in the current buffer."
