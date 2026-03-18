@@ -285,6 +285,7 @@ Respects `flywrite-granularity'."
           (setq end (point))
           (when (< end beg) (setq end beg))
           (cons beg end))
+
       ;; sentence granularity — treat single space as sentence boundary
       ;; regardless of the user's `sentence-end-double-space' setting
       (let ((sentence-end-double-space nil)
@@ -355,6 +356,7 @@ Checks font-lock faces and major mode."
   "Process a single changed unit bounded by UBEG..UEND with content HASH."
   (flywrite--clear-unit-diagnostics ubeg uend)
   (flywrite--update-region-hash ubeg uend hash)
+
   ;; Remove stale pending queue entries for this region
   (setq flywrite--pending-queue
         (cl-remove-if (lambda (entry)
@@ -362,6 +364,7 @@ Checks font-lock faces and major mode."
                              (<= (nth 1 entry) uend)
                              (>= (nth 2 entry) ubeg)))
                       flywrite--pending-queue))
+
   ;; Skip if already checked with same hash
   (unless (gethash hash flywrite--checked-sentences)
     ;; Remove any existing dirty entry for overlapping region
@@ -370,6 +373,7 @@ Checks font-lock faces and major mode."
                           (and (<= (nth 0 entry) uend)
                                (>= (nth 1 entry) ubeg)))
                         flywrite--dirty-registry))
+
     ;; Add new dirty entry
     (push (list ubeg uend hash) flywrite--dirty-registry)
     (flywrite--log "Dirty: [%d-%d] hash=%s queue=%d text=%S"
@@ -391,6 +395,8 @@ BEG and END are the changed region boundaries."
                (units (if (and bounds2 (not (equal bounds1 bounds2)))
                           (list bounds1 bounds2)
                         (list bounds1))))
+
+          ;; An edit near a sentence boundary can dirty two units.
           (dolist (bounds units)
             (flywrite--process-changed-unit
              (car bounds) (cdr bounds)
@@ -435,11 +441,21 @@ for `url-request-extra-headers'.  API-KEY may be nil for local
 providers."
   (let* ((anthropic-p (flywrite--anthropic-api-p))
          (prompt (flywrite--get-system-prompt))
+         ;; Anthropic caching wraps the prompt in a content block:
+         ;;   "system": [{"type":"text", "text":"...",
+         ;;               "cache_control":{"type":"ephemeral"}}]
+         ;; Without caching, use the plain prompt string.
          (system-msg (if (and anthropic-p flywrite-enable-caching)
                          `[((type . "text")
                             (text . ,prompt)
                             (cache_control . ((type . "ephemeral"))))]
                        prompt))
+
+         ;; Anthropic: system prompt is a top-level "system" field.
+         ;;   {"model":"...", "system":"...", "messages":[{"role":"user",...}]}
+         ;;
+         ;; OpenAI-compatible: system prompt is a message with role "system".
+         ;;   {"model":"...", "messages":[{"role":"system",...},{"role":"user",...}]}
          (payload (json-encode
                    (if anthropic-p
                        `((model . ,flywrite-model)
@@ -453,6 +469,9 @@ providers."
                                      (content . ,prompt))
                                     ((role . "user")
                                      (content . ,text))])))))
+
+         ;; Anthropic: "x-api-key: sk-..." + "anthropic-version: 2023-06-01"
+         ;; Others:    "Authorization: Bearer sk-..."
          (headers
           (append `(("Content-Type" . "application/json")
                     ,@(cond
@@ -486,7 +505,7 @@ Shows status in the minibuffer.  On failure, suggests enabling
              (url-request-extra-headers (cdr request))
              (url-request-data (encode-coding-string payload 'utf-8)))
 
-        ;; Fire async request; callback reports success/failure.
+        ;; Fire the async request; the callback reports success/failure.
         (flywrite--log "Connection test: sending request to %s JSON=%s" flywrite-api-url payload)
         (url-retrieve
          flywrite-api-url
@@ -505,7 +524,7 @@ Shows status in the minibuffer.  On failure, suggests enabling
                        (flywrite--log "Connection test response: success JSON=%S" json-data))
                      (message "flywrite: connection test success"))
 
-                 ;; Failure path: log response body for debugging.
+                 ;; Failure path: log the response body for debugging.
                  (error
                   (flywrite--log "Connection test failed: %s JSON=%s"
                                   (error-message-string cb-err)
@@ -534,6 +553,8 @@ HASH is the content hash at time of dispatch for stale checking."
     (unless flywrite-api-url
       (flywrite--log "ERROR: flywrite-api-url is not set")
       (error "Set flywrite-api-url before use.  See the README for configuration"))
+
+    ;; Extract text and build the HTTP request (headers + JSON payload).
     (let* ((text (with-current-buffer buf
                     (buffer-substring-no-properties beg end)))
            (api-key (flywrite--get-api-key))
@@ -547,10 +568,15 @@ HASH is the content hash at time of dispatch for stale checking."
            (start-time (current-time)))
     (flywrite--log "API call: [%d-%d] buf=%s url=%s text=%.80s hash=%s"
                    beg end (buffer-name buf) flywrite-api-url text hash)
+
+    ;; Increment in-flight counter and mark hash as checked before the
+    ;; async call so that no duplicate request is dispatched while this
+    ;; one is still in progress.
     (with-current-buffer buf
       (cl-incf flywrite--in-flight)
-      ;; Mark as checked now to prevent duplicate in-flight requests
       (puthash hash t flywrite--checked-sentences))
+
+    ;; Fire async HTTP request; track the connection buffer for cleanup.
     (let ((conn-buf
            (url-retrieve
             flywrite-api-url
@@ -588,6 +614,8 @@ Clears the pending queue on 429 rate-limit errors."
                          500 nil nil t)))))
       (flywrite--log "API HTTP error: %s (%.2fs) hash=%s\nResponse body: %s"
                      err-info latency hash (or err-body "<empty>"))
+
+      ;; On 429 rate-limit, flush the queue to avoid hammering the API.
       (when (and (listp err-info) (member 429 err-info))
         (flywrite--log "Rate limited (429) hash=%s" hash)
         (when (buffer-live-p buf)
@@ -607,6 +635,7 @@ or nil if no text could be extracted.  Signals on malformed HTTP."
                        (match-string 1))))
     (unless (re-search-forward "\r?\n\r?\n" nil t)
       (error "Malformed HTTP response"))
+
     ;; Parse JSON body (json-read returns alists with symbol keys)
     ;; Anthropic: {content: [{type:"text", text:"..."}]}
     ;; OpenAI:    {choices: [{message: {content: "..."}}]}
@@ -628,6 +657,8 @@ or nil if no text could be extracted.  Signals on malformed HTTP."
 (defun flywrite--handle-stale-response (beg end hash)
   "Return non-nil if the response for BEG..END with HASH is stale.
 When stale, removes the old hash and re-dirties the region."
+  ;; The text may have changed while the API call was in-flight.
+  ;; Detect this via hash mismatch and re-dirty instead of applying.
   (when (or (> end (point-max))
             (< beg (point-min))
             (not (string= hash (flywrite--content-hash beg end))))
@@ -642,6 +673,7 @@ When stale, removes the old hash and re-dirties the region."
 (defun flywrite--apply-suggestions (buf beg end hash text)
   "Parse TEXT as suggestion JSON and create diagnostics in BUF.
 BEG, END, HASH identify the checked region."
+  ;; Strip markdown code fences that some LLMs wrap around JSON.
   (condition-case parse-err
       (let* ((clean-text (replace-regexp-in-string
                           "\\`[ \t\n]*```\\(?:json\\)?[ \t]*\n?" ""
@@ -651,6 +683,7 @@ BEG, END, HASH identify the checked region."
              (suggestions (alist-get 'suggestions parsed)))
         (flywrite--log "Suggestions: %d for [%d-%d] hash=%s"
                        (length suggestions) beg end hash)
+
         ;; Remove old diagnostics for this region
         (setq flywrite--diagnostics
               (cl-remove-if
@@ -658,10 +691,12 @@ BEG, END, HASH identify the checked region."
                  (and (>= (flymake-diagnostic-beg diag) beg)
                       (<= (flymake-diagnostic-end diag) end)))
                flywrite--diagnostics))
+
         ;; Add new diagnostics
         (let ((region-text (buffer-substring-no-properties beg end)))
           (dolist (suggestion (append suggestions nil))
             (flywrite--make-suggestion-diagnostic buf beg region-text suggestion hash)))
+
         ;; Report to flymake and mark checked
         (flywrite--report-to-flymake hash)
         (puthash hash t flywrite--checked-sentences))
@@ -730,6 +765,7 @@ request.  START-TIME is used for latency logging."
     (if (flywrite--duplicate-callback-p response-buf hash)
         (when (buffer-live-p response-buf)
           (kill-buffer response-buf))
+
       ;; Remove from connection tracking
       (when (buffer-live-p buf)
         (with-current-buffer buf
@@ -742,6 +778,7 @@ request.  START-TIME is used for latency logging."
              (flywrite--log "Response handler error: %s hash=%s"
                             (error-message-string err) hash)
              (message "flywrite: API error: %s" (error-message-string err))))
+
         ;; Always: decrement counter and drain queue
         (when (buffer-live-p buf)
           (with-current-buffer buf
@@ -749,6 +786,7 @@ request.  START-TIME is used for latency logging."
             (when (< flywrite--in-flight 0)
               (setq flywrite--in-flight 0))
             (flywrite--drain-queue)))
+
         ;; Clean up response buffer
         (kill-buffer response-buf)))))
 
@@ -756,6 +794,8 @@ request.  START-TIME is used for latency logging."
 
 (defun flywrite--eager-scan ()
   "Add units from the paragraph around point to the dirty registry."
+  ;; Allows reviewing existing text by moving the cursor through it,
+  ;; without requiring an edit to trigger checking.
   (condition-case err
       (save-excursion
         (let (pbeg pend)
@@ -776,6 +816,8 @@ request.  START-TIME is used for latency logging."
   "Validate and dispatch or queue a single dirty entry.
 BUF is the buffer, BEG/END are bounds, HASH is the content hash,
 SEEN is a hash table for deduplication within this batch."
+  ;; Guard: only proceed if bounds are valid, the hash hasn't already
+  ;; been checked or seen in this batch, and the region is prose.
   (when (and (<= end (point-max))
              (>= beg (point-min))
              (not (gethash hash flywrite--checked-sentences))
@@ -785,7 +827,12 @@ SEEN is a hash table for deduplication within this batch."
                    (flywrite--log "Skipped (non-prose region): [%d-%d] hash=%s"
                                   beg end hash)
                    nil)))
+
+    ;; Record in batch-local SEEN table to deduplicate within this dispatch.
     (puthash hash t seen)
+
+    ;; Send immediately if under the concurrency cap, otherwise append
+    ;; to the pending queue for later draining.
     (if (< flywrite--in-flight flywrite-max-concurrent)
         (flywrite--send-request buf beg end hash)
       (flywrite--log "Queued: [%d-%d] (at cap %d) hash=%s"
@@ -796,6 +843,7 @@ SEEN is a hash table for deduplication within this batch."
 
 (defun flywrite--dispatch-dirty-registry (buf)
   "Snapshot and clear the dirty registry, dispatch or queue entries for BUF."
+  ;; Snapshot-and-clear so new edits during dispatch go into a fresh registry.
   (when flywrite--dirty-registry
     (let ((snapshot flywrite--dirty-registry)
           (seen (make-hash-table :test 'equal)))
@@ -869,6 +917,7 @@ Returns a list of (unit-beg unit-end hash) triples."
                (entry (when (<= uend end)
                         (flywrite--try-collect-unit ubeg uend seen))))
           (when entry (push entry units))
+
           ;; Move past current unit and inter-sentence whitespace
           (goto-char (max (1+ (point)) uend))
           (skip-chars-forward " \t\n"))))
@@ -915,6 +964,7 @@ Prompts for confirmation when the count exceeds
       (user-error "Cancelled"))
     (let ((count 0))
       (dolist (entry units)
+
         ;; Remove from checked so re-checks work
         (remhash (nth 2 entry) flywrite--checked-sentences)
         (push entry flywrite--dirty-registry)
@@ -929,6 +979,7 @@ Prompts for confirmation when the count exceeds
                           (nth 0 entry) (nth 1 entry)))
                         80 nil nil t)))
       (message "flywrite: queued %d sentences in region for checking" count)
+
       ;; Dispatch immediately rather than waiting for idle timer
       (flywrite--idle-timer-fn (current-buffer)))))
 
@@ -944,11 +995,13 @@ Respects `flywrite-granularity'."
          (hash (flywrite--content-hash ubeg uend)))
     (when (flywrite--should-skip-p ubeg)
       (user-error "Point is in a skipped region"))
+
     ;; Remove from checked so it gets re-checked even if seen before
     (remhash hash flywrite--checked-sentences)
     (push (list ubeg uend hash) flywrite--dirty-registry)
     (message "flywrite: queued %s at point for checking"
              (if (eq flywrite-granularity 'paragraph) "paragraph" "sentence"))
+
     ;; Dispatch immediately rather than waiting for idle timer
     (flywrite--idle-timer-fn (current-buffer))))
 
@@ -1004,20 +1057,20 @@ Eglot replaces the buffer-local value with only its own backend."
   (setq flywrite--diagnostics nil)
   (setq flywrite--report-fn nil)
 
-  ;; Hook into after-change-functions
+  ;; Register change-detection hook
   (add-hook 'after-change-functions #'flywrite--after-change nil t)
 
-  ;; Enable flymake and add our backend
+  ;; Enable flymake and register our diagnostic backend
   (unless (bound-and-true-p flymake-mode)
     (flymake-mode 1))
   (add-hook 'flymake-diagnostic-functions #'flywrite-flymake nil t)
 
-  ;; Re-add our backend after eglot setup (eglot replaces
-  ;; flymake-diagnostic-functions with only its own backend)
+  ;; Eglot replaces flymake-diagnostic-functions with only its own
+  ;; backend, so re-add ours after eglot setup.
   (when (fboundp 'eglot-managed-mode-hook)
     (add-hook 'eglot-managed-mode-hook #'flywrite--ensure-flymake-backend nil t))
 
-  ;; Start idle timer
+  ;; Start the idle timer that drains the dirty registry
   (setq flywrite--idle-timer
         (run-with-idle-timer flywrite-idle-delay t
                              #'flywrite--idle-timer-fn (current-buffer)))
@@ -1033,7 +1086,7 @@ Eglot replaces the buffer-local value with only its own backend."
                    "custom"))
   (flywrite--log "System prompt:\n%s" (flywrite--get-system-prompt))
 
-  ;; Test API connection on startup
+  ;; Verify the API connection works on startup
   (when flywrite-test-on-load
     (flywrite--test-connection)))
 
@@ -1043,12 +1096,13 @@ Eglot replaces the buffer-local value with only its own backend."
                  (buffer-name) flywrite--in-flight
                  (length flywrite--pending-queue)
                  (length flywrite--dirty-registry))
+
   ;; Cancel idle timer
   (when flywrite--idle-timer
     (cancel-timer flywrite--idle-timer)
     (setq flywrite--idle-timer nil))
 
-  ;; Kill in-flight HTTP connection buffers so network processes don't linger
+  ;; Kill in-flight HTTP buffers so network processes don't linger
   (dolist (conn-buf flywrite--connection-buffers)
     (when (buffer-live-p conn-buf)
       (let ((proc (get-buffer-process conn-buf)))
@@ -1057,12 +1111,12 @@ Eglot replaces the buffer-local value with only its own backend."
       (kill-buffer conn-buf)))
   (setq flywrite--connection-buffers nil)
 
-  ;; Remove hooks
+  ;; Unhook from after-change, flymake, and eglot
   (remove-hook 'after-change-functions #'flywrite--after-change t)
   (remove-hook 'flymake-diagnostic-functions #'flywrite-flymake t)
   (remove-hook 'eglot-managed-mode-hook #'flywrite--ensure-flymake-backend t)
 
-  ;; Clear diagnostics
+  ;; Clear diagnostics and reset all state
   (when flywrite--report-fn
     (funcall flywrite--report-fn nil))
   (setq flywrite--diagnostics nil)
