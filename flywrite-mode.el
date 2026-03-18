@@ -613,7 +613,7 @@ Shows status in the minibuffer.  On failure, suggests enabling
                                     (goto-char (point-min))
                                     (when (re-search-forward "\r?\n\r?\n" nil t)
                                       (buffer-substring-no-properties (point) (point-max)))))
-                  (message "flywrite: connection test failed: %s.  Enable `flywrite-debug' and check *flywrite-log* for details."
+                  (message "flywrite: connection test failed: %s.  Check *flywrite-log* for details."
                            (error-message-string cb-err))))
              (kill-buffer (current-buffer))))
          nil t t))
@@ -621,8 +621,7 @@ Shows status in the minibuffer.  On failure, suggests enabling
     ;; Synchronous errors (bad config, missing key, etc.).
     (error
      (flywrite--log "Connection test failed: %s" (error-message-string err))
-     (message "flywrite: connection test failed: %s.  Enable `flywrite-debug' and check *flywrite-log* for details."
-              (error-message-string err)))))
+     (message "flywrite: connection test failed: %s" (error-message-string err)))))
 
 
 (defun flywrite--send-request (buf beg end hash)
@@ -672,8 +671,7 @@ HASH is the content hash at time of dispatch for stale checking."
       (error
        (flywrite--log "Request error: %s url=%s hash=%s"
                       (error-message-string err) flywrite-api-url hash)
-       (message "flywrite: request error: %s.  Enable `flywrite-debug' and check *flywrite-log* for details."
-                (error-message-string err))))))
+       (message "flywrite: request error.  Check *flywrite-log* for details.")))))
 
 ;;;; ---- Response handler helpers ----
 
@@ -796,7 +794,7 @@ BEG, END, HASH identify the checked region."
     (error
      (flywrite--log "LLM returned unparseable response: %s hash=%s\nRaw text: %s"
                     (error-message-string parse-err) hash text)
-     (message "flywrite: LLM returned invalid JSON (not a bug in flywrite). Enable `flywrite-debug' and check *flywrite-log* for details."))))
+     (message "flywrite: LLM returned invalid JSON.  Check *flywrite-log* for details."))))
 
 
 (defun flywrite--make-suggestion-diagnostic (buf beg region-text suggestion hash)
@@ -884,8 +882,7 @@ request.  START-TIME is used for latency logging."
                (flywrite--log "Response handler error: %s hash=%s\nResponse body: %s"
                               (error-message-string err) hash
                               (or body "<empty>"))
-               (message "flywrite: API error: %s.  Enable `flywrite-debug' and check *flywrite-log* for details."
-                        (error-message-string err)))))
+               (message "flywrite: API error.  Check *flywrite-log* for details."))))
 
         ;; Always: decrement counter and drain queue
         (when (buffer-live-p buf)
