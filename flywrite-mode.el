@@ -569,12 +569,17 @@ Shows status in the minibuffer.  On failure, suggests enabling
       ;; Validate configuration and build the request.
       (let* ((_ (unless flywrite-api-url
                   (error "Set flywrite-api-url before testing.  Try M-x customize-variable flywrite-api-url")))
+             (_ (unless (string-match-p "\\`https?://" flywrite-api-url)
+                  (error "URL flywrite-api-url must start with http:// or https://: %s"
+                         flywrite-api-url)))
              (text "The quick brown fox jumped over the lazy dog.")
              (api-key (flywrite--get-api-key))
              (local-p (and flywrite-api-url
                           (string-match-p "\\(?:localhost\\|127\\.0\\.0\\.1\\)" flywrite-api-url)))
              (_ (when (and (not api-key) (not local-p))
                   (error "API key is not set.  See the README for configuration")))
+             (_ (flywrite--effective-model))
+             (_ (flywrite--get-system-prompt))
              (request (flywrite--build-request text api-key))
              (payload (car request))
              (url-request-method "POST")
