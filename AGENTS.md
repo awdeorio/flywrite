@@ -90,4 +90,7 @@ Key design decisions:
 - Package prefix: `flywrite-` (public), `flywrite--` (internal)
 - No default keybindings; commands available via `M-x`
 - Diagnostics are tagged with `[flywrite]` suffix in messages
-- Max control-flow nesting depth is 6 (enforced by `lint-nesting.el`; counted forms include `if`, `when`, `let`, `save-excursion`, `condition-case`, etc.)
+- 80-character line width
+- Logical nesting depth: prefer 4-5 levels, hard limit of 6 (enforced by `lint-nesting.el`; counted forms include `if`, `when`, `let`, `save-excursion`, `condition-case`, etc.)
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributing guide.

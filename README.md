@@ -277,16 +277,10 @@ Install [flymake-popon](https://github.com/akicho8/flymake-popon) (see [Popup ex
 **API errors in the log**
 Check that `flywrite-api-url` matches your provider and that your API key has credits remaining.
 
-## Testing
+## Contributing
 
-Run the regression tests:
-```bash
-./test
-```
-
-### Manual end-to-end tests
-
-The `samples/` directory contains files for manual testing in Emacs. Open a file, run `M-x flywrite-mode`, and verify diagnostics appear as expected. See [`samples/README.md`](samples/README.md) for file descriptions.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, 
+and code style.
 
 ## Debugging
 Debug logging is on by default. Check *flywrite-log* for API calls, responses, and events.
