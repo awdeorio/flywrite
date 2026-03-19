@@ -210,6 +210,29 @@ Choose one method:
 
 Anthropic endpoints are auto-detected by hostname and use the `x-api-key` header; all other providers use a `Bearer` token in the `Authorization` header. Local providers like Ollama work without an API key.
 
+### Diagnostic appearance
+Flywrite uses its own faces for underlines and popup/echo text, independent of flymake's built-in note/warning/error faces.
+
+Customize underline color or style (default shown):
+```elisp
+(set-face-attribute 'flywrite-diagnostic nil
+                    :underline '(:style wave :color "deep sky blue"))
+```
+
+Customize popup and echo area text color (default shown):
+```elisp
+(set-face-attribute 'flywrite-diagnostic-echo nil
+                    :foreground "steel blue")
+```
+
+Or use the interactive picker:
+```
+M-x customize-face RET flywrite-diagnostic RET
+M-x customize-face RET flywrite-diagnostic-echo RET
+```
+
+Both faces are in the `flywrite` customization group (`M-x customize-group RET flywrite`). Run `M-x list-colors-display` in Emacs to see all available color names.
+
 ### Popup explanations
 For the best experience, install [flymake-popon](https://github.com/akicho8/flymake-popon) to see suggestion explanations as inline popups near the flagged text (included in the [Quick start](#quick-start) config). Without it, suggestions are shown in the echo area when point is on a diagnostic.
 
@@ -239,7 +262,7 @@ Run any command with `M-x`. No default keybindings are provided — bind them yo
 ## Troubleshooting
 
 **Config validation error on startup**
-Flywrite validates configuration when the mode is enabled. If you see an error like "Set flywrite-api-url" or "API key is not set", check that `flywrite-api-url` and your API key are configured correctly. See [API providers](#api-providers) for setup instructions.
+Flywrite validates API configuration on enable. If you see an error like "Set flywrite-api-url" or "API key is not set", see [API providers](#api-providers) for setup instructions.
 
 **Nothing happens / no underlines appear**
 1. Make sure `flywrite-mode` is active: check the mode line for `flywrite`.

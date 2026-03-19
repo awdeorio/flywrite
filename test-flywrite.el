@@ -730,6 +730,76 @@
         (should (gethash hash flywrite--checked-sentences)))
       (flywrite-mode -1))))
 
+;;;; ---- 529 overload handling ----
+
+
+(ert-deftest flywrite-test-529-clears-pending-queue ()
+  "A 529 error clears the pending queue to stop hammering an overloaded API."
+  (let ((flywrite-api-url "http://localhost:0/v1/chat/completions"))
+    (with-temp-buffer
+      (text-mode)
+      (flywrite-mode 1)
+      (insert "Test sentence.")
+      (let* ((hash (flywrite--content-hash 1 (point-max)))
+             (buf (current-buffer))
+             (status `(:error (error http 529))))
+        (puthash hash t flywrite--checked-sentences)
+        (setq flywrite--in-flight 1)
+        (setq flywrite--pending-queue
+              (list (list buf 1 15 "fakehash1")
+                    (list buf 1 15 "fakehash2")))
+        (with-temp-buffer
+          (insert "HTTP/1.1 529 Overloaded\r\n\r\n{}")
+          (goto-char (point-min))
+          (flywrite--handle-response status buf 1 15 hash (current-time)))
+        (should-not flywrite--pending-queue))
+      (flywrite-mode -1))))
+
+
+(ert-deftest flywrite-test-529-keeps-hash-checked ()
+  "A 529 error keeps the hash in checked-sentences to prevent retry."
+  (let ((flywrite-api-url "http://localhost:0/v1/chat/completions"))
+    (with-temp-buffer
+      (text-mode)
+      (flywrite-mode 1)
+      (insert "Test sentence.")
+      (let* ((hash (flywrite--content-hash 1 (point-max)))
+             (buf (current-buffer))
+             (status `(:error (error http 529))))
+        (puthash hash t flywrite--checked-sentences)
+        (setq flywrite--in-flight 1)
+        (with-temp-buffer
+          (insert "HTTP/1.1 529 Overloaded\r\n\r\n{}")
+          (goto-char (point-min))
+          (flywrite--handle-response status buf 1 15 hash (current-time)))
+        (should (gethash hash flywrite--checked-sentences)))
+      (flywrite-mode -1))))
+
+
+(ert-deftest flywrite-test-529-user-message ()
+  "A 529 error shows a user-facing message mentioning overloaded."
+  (let ((flywrite-api-url "http://localhost:0/v1/chat/completions"))
+    (with-temp-buffer
+      (text-mode)
+      (flywrite-mode 1)
+      (insert "Test sentence.")
+      (let* ((hash (flywrite--content-hash 1 (point-max)))
+             (buf (current-buffer))
+             (status `(:error (error http 529)))
+             (messages nil))
+        (puthash hash t flywrite--checked-sentences)
+        (setq flywrite--in-flight 1)
+        (cl-letf (((symbol-function 'message)
+                   (lambda (fmt &rest args)
+                     (push (apply #'format fmt args) messages))))
+          (with-temp-buffer
+            (insert "HTTP/1.1 529 Overloaded\r\n\r\n{}")
+            (goto-char (point-min))
+            (flywrite--handle-response status buf 1 15 hash (current-time))))
+        (should (cl-some (lambda (m) (string-match-p "overloaded" m)) messages)))
+      (flywrite-mode -1))))
+
+
 ;;;; ---- Duplicate callback guard ----
 
 

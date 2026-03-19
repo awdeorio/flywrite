@@ -39,6 +39,32 @@
 (require 'url)
 (require 'url-http)
 
+;;;; ---- Faces ----
+
+
+(defface flywrite-diagnostic
+  '((t :underline (:style wave :color "deep sky blue")))
+  "Face for flywrite diagnostic underlines.
+Customize this to change the color or style of flywrite suggestions."
+  :group 'flywrite)
+
+
+(defface flywrite-diagnostic-echo
+  '((t :foreground "medium blue"))
+  "Face for flywrite diagnostic messages in popups and the echo area."
+  :group 'flywrite)
+
+
+;;;; ---- Flymake diagnostic type ----
+
+
+(put 'flywrite-diagnostic-type 'flymake-category 'flymake-note)
+(put 'flywrite-diagnostic-type 'flymake-overlay-control
+     '((face . flywrite-diagnostic)))
+(put 'flywrite-diagnostic-type 'echo-face 'flywrite-diagnostic-echo)
+(put 'flywrite-diagnostic-type 'mode-line-face 'flywrite-diagnostic-echo)
+
+
 ;;;; ---- Customization group & variables ----
 
 
@@ -561,7 +587,7 @@ Signal an error if configuration is invalid, preventing mode activation."
   (condition-case err
       (progn
         (unless flywrite-api-url
-          (error "Set flywrite-api-url."))
+          (error "Set flywrite-api-url"))
         (unless (string-match-p "\\`https?://" flywrite-api-url)
           (error "Variable flywrite-api-url must start with http:// or https://: %s"
                  flywrite-api-url))
@@ -658,16 +684,24 @@ Clears the pending queue on 429 rate-limit errors."
       (flywrite--log "API HTTP error: %s (%.2fs) hash=%s\nResponse body: %s"
                      err-info latency hash (or err-body "<empty>"))
 
-      ;; On 429 rate-limit, flush the queue to avoid hammering the API.
-      (when (and (listp err-info) (member 429 err-info))
-        (flywrite--log "Rate limited (429) hash=%s" hash)
+      ;; On 429 rate-limit or 529 overload, flush the queue to avoid
+      ;; hammering the API.
+      (when (and (listp err-info)
+                 (or (member 429 err-info) (member 529 err-info)))
+        (flywrite--log "%s (%d) hash=%s"
+                       (if (member 429 err-info) "Rate limited" "API overloaded")
+                       (if (member 429 err-info) 429 529) hash)
         (when (buffer-live-p buf)
           (with-current-buffer buf
             (when flywrite--pending-queue
-              (flywrite--log "Clearing %d queued requests due to rate limit hash=%s"
-                             (length flywrite--pending-queue) hash)
+              (flywrite--log "Clearing %d queued requests due to %s hash=%s"
+                             (length flywrite--pending-queue)
+                             (if (member 429 err-info) "rate limit" "API overload")
+                             hash)
               (setq flywrite--pending-queue nil)))))
-      (error "API request failed: %s" err-info))))
+      (error (if (and (listp err-info) (member 529 err-info))
+                 "API overloaded (529), try again later"
+               (format "API request failed: %s" err-info))))))
 
 
 (defun flywrite--extract-response-text ()
@@ -764,7 +798,7 @@ the region content.  HASH is for logging."
         (let ((diag-beg (+ beg match-pos))
               (diag-end (+ beg match-pos (length quote-str))))
           (push (flymake-make-diagnostic
-                 buf diag-beg diag-end :note
+                 buf diag-beg diag-end 'flywrite-diagnostic-type
                  (concat reason " [flywrite]"))
                 flywrite--diagnostics)
           (flywrite--log "Diagnostic: [%d-%d] %s hash=%s"
@@ -837,7 +871,7 @@ request.  START-TIME is used for latency logging."
                (flywrite--log "Response handler error: %s hash=%s\nResponse body: %s"
                               (error-message-string err) hash
                               (or body "<empty>"))
-               (message "flywrite: API error.  Check *flywrite-log* for details."))))
+               (message "flywrite: %s" (error-message-string err)))))
 
         ;; Always: decrement counter and drain queue
         (when (buffer-live-p buf)
@@ -1194,18 +1228,24 @@ Eglot replaces the buffer-local value with only its own backend."
       (kill-buffer conn-buf)))
   (setq flywrite--connection-buffers nil)
 
-  ;; Unhook from after-change, flymake, and eglot
+  ;; Unhook from after-change and eglot
   (remove-hook 'after-change-functions #'flywrite--after-change t)
-  (remove-hook 'flymake-diagnostic-functions #'flywrite-flymake t)
   (remove-hook 'eglot-managed-mode-hook #'flywrite--ensure-flymake-backend t)
 
-  ;; Clear diagnostics and reset all state
+  ;; Clear diagnostics before reporting so flymake-start doesn't
+  ;; re-report stale diagnostics via the flywrite-flymake backend
+  (setq flywrite--diagnostics nil)
   (when flywrite--report-fn
     (funcall flywrite--report-fn nil))
-  (setq flywrite--diagnostics nil)
+  (when (bound-and-true-p flymake-mode)
+    (flymake-start))
+  (remove-hook 'flymake-diagnostic-functions #'flywrite-flymake t)
+
+  ;; Reset all state
   (setq flywrite--dirty-registry nil)
   (setq flywrite--pending-queue nil)
-  (clrhash flywrite--checked-sentences))
+  (clrhash flywrite--checked-sentences)
+  (clrhash flywrite--region-hashes))
 
 (provide 'flywrite-mode)
 
