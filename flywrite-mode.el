@@ -1157,7 +1157,7 @@ Respects `flywrite-granularity'."
   "Minor mode for inline writing suggestions via LLM.
 Provides sentence-level grammar, clarity, and style feedback as
 flymake diagnostics."
-  :lighter " FlyW"
+  :lighter " Flywrite"
   :group 'flywrite
   (cond
    ((not flywrite-mode)
