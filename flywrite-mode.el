@@ -586,20 +586,40 @@ Signal an error if configuration is invalid, preventing mode activation."
   (flywrite--log "Validating API configuration")
   (condition-case err
       (progn
+        ;; API URL must be set and well-formed.
         (unless flywrite-api-url
           (error "Set flywrite-api-url"))
+        (flywrite--log "API URL: %s" flywrite-api-url)
         (unless (string-match-p "\\`https?://" flywrite-api-url)
           (error "Variable flywrite-api-url must start with http:// or https://: %s"
                  flywrite-api-url))
+
+        ;; API key is required for remote providers but optional for
+        ;; local ones (e.g., Ollama on localhost).
         (let* ((local-p (string-match-p
                          "\\(?:localhost\\|127\\.0\\.0\\.1\\)" flywrite-api-url))
                (api-key (flywrite--get-api-key)))
+          (flywrite--log "API key source: %s"
+                         (cond (flywrite-api-key "flywrite-api-key variable")
+                               ((flywrite--read-api-key-file)
+                                (format "flywrite-api-key-file (%s)"
+                                        flywrite-api-key-file))
+                               ((getenv "FLYWRITE_API_KEY")
+                                "FLYWRITE_API_KEY env var")
+                               (local-p "none (local provider)")
+                               (t "none")))
           (when (and (not api-key) (not local-p))
             (error "API key is not set.  See the README for configuration")))
-        (flywrite--effective-model)
-        (flywrite--get-system-prompt)
-        (flywrite--log "Config valid: url=%s model=%s"
-                       flywrite-api-url (flywrite--effective-model)))
+
+        ;; Model resolves without error
+        (flywrite--log "API model: %s" (flywrite--effective-model))
+
+        ;; System prompt
+        (flywrite--log "prompt=%s"
+                       (if (symbolp flywrite-system-prompt)
+                           flywrite-system-prompt "custom"))
+        (flywrite--log "System prompt: %s" (flywrite--get-system-prompt))
+        (flywrite--log "Config valid"))
     (error
      (flywrite--log "Config validation failed: %s" (error-message-string err))
      (signal (car err) (cdr err)))))
@@ -1203,8 +1223,7 @@ Eglot replaces the buffer-local value with only its own backend."
                  flywrite-eager flywrite-enable-caching
                  (if (symbolp flywrite-system-prompt)
                      flywrite-system-prompt
-                   "custom"))
-  (flywrite--log "System prompt:\n%s" (flywrite--get-system-prompt)))
+                   "custom")))
 
 
 (defun flywrite--disable ()
