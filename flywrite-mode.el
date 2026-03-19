@@ -248,7 +248,7 @@ Rules:
 - Ignore markup and formatting commands (LaTeX, HTML, Org-mode, etc.) -- only evaluate the prose content
 - Flag informal language, contractions, and colloquialisms
 - Flag vague hedging (e.g., 'a lot', 'things', 'stuff', 'really')
-- Flag first person when it weakens objectivity (e.g., 'I think', 'we feel')
+- Flag unsupported opinions (e.g., 'I think X is better') -- state evidence instead
 - Flag unsupported superlatives (e.g., 'the best', 'the most important')
 - Flag wordiness and nominalizations (e.g., 'make an adjustment' -> 'adjust')
 - Flag subjective qualifiers (e.g., 'obviously', 'clearly', 'of course')
