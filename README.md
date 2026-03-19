@@ -1,6 +1,6 @@
 # flywrite-mode
 
-An Emacs minor mode for grammar, style, and academic writing feedback. Like Flyspell, but powered by an LLM. One file, no dependencies. Suggestions appear as flymake diagnostics with inline explanations.
+An Emacs minor mode for LLM-powered grammar, style, and academic writing feedback. Suggestions appear as flymake diagnostics with inline explanations. Features a [customizable prompt](#system-prompt) and [flexible API provider](#api-providers) support.
 
 **Privacy warning:** Flywrite sends your document text to an LLM API.
 
