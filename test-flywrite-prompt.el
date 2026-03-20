@@ -84,7 +84,20 @@ Every style in `flywrite--prompt-alist' must have an entry.")
 (defun flywrite-prompt-test--save-cache ()
   "Write cache to `flywrite-prompt-test--cache-file'."
   (with-temp-file flywrite-prompt-test--cache-file
-    (insert (json-encode flywrite-prompt-test--cache))
+    ;; Normalize nil suggestions to empty vectors so json-encode
+    ;; writes [] instead of null.
+    (let ((normalized
+           (mapcar (lambda (entry)
+                     (let* ((resp (alist-get "response" entry nil nil #'equal))
+                            (sugs (and resp (or (alist-get 'suggestions resp)
+                                                (cdr (assoc "suggestions" resp))))))
+                       (when (and resp (null sugs))
+                         (let ((cell (or (assoc 'suggestions resp)
+                                         (assoc "suggestions" resp))))
+                           (when cell (setcdr cell []))))
+                       entry))
+                   flywrite-prompt-test--cache)))
+      (insert (json-encode normalized)))
     (json-pretty-print (point-min) (point-max))))
 
 (defun flywrite-prompt-test--prompt-hash ()
@@ -100,13 +113,29 @@ Every style in `flywrite--prompt-alist' must have an entry.")
           (equal (alist-get "prompt_hash" entry nil nil #'equal) prompt-hash)))
    flywrite-prompt-test--cache))
 
+(defun flywrite-prompt-test--parse-response-string (response-text)
+  "Parse RESPONSE-TEXT (a JSON string, possibly wrapped in markdown) to alist.
+Empty arrays are preserved as empty vectors so `json-encode' writes []."
+  (let* ((clean (replace-regexp-in-string
+                 "\\`[ \t\n]*```\\(?:json\\)?[ \t]*\n?" ""
+                 (replace-regexp-in-string
+                  "\n?```[ \t\n]*\\'" "" response-text)))
+         (json-array-type 'list)
+         (parsed (json-read-from-string clean))
+         (suggestions (alist-get 'suggestions parsed)))
+    (when (null suggestions)
+      (setf (alist-get 'suggestions parsed) []))
+    parsed))
+
 (defun flywrite-prompt-test--cache-store (text model prompt-hash response)
-  "Store a cache entry for TEXT, MODEL, PROMPT-HASH, and RESPONSE."
-  (let ((entry `(("text" . ,text)
-                 ("model" . ,model)
-                 ("prompt_hash" . ,prompt-hash)
-                 ("response" . ,response)
-                 ("timestamp" . ,(format-time-string "%Y-%m-%dT%H:%M:%SZ" nil t)))))
+  "Store a cache entry for TEXT, MODEL, PROMPT-HASH, and RESPONSE.
+RESPONSE is the raw API response string; it is parsed to JSON for storage."
+  (let* ((response-obj (flywrite-prompt-test--parse-response-string response))
+         (entry `(("text" . ,text)
+                  ("model" . ,model)
+                  ("prompt_hash" . ,prompt-hash)
+                  ("response" . ,response-obj)
+                  ("timestamp" . ,(format-time-string "%Y-%m-%dT%H:%M:%SZ" nil t)))))
     (push entry flywrite-prompt-test--cache)
     (flywrite-prompt-test--save-cache)))
 
@@ -148,15 +177,14 @@ Uses flywrite configuration for URL, model, API key, and system prompt."
             text-content))
       (kill-buffer response-buf))))
 
-(defun flywrite-prompt-test--parse-suggestions (response-text)
-  "Parse RESPONSE-TEXT as JSON and return the suggestions array as a list."
-  (let* ((clean (replace-regexp-in-string
-                 "\\`[ \t\n]*```\\(?:json\\)?[ \t]*\n?" ""
-                 (replace-regexp-in-string
-                  "\n?```[ \t\n]*\\'" "" response-text)))
-         (json-array-type 'list)
-         (parsed (json-read-from-string clean)))
-    (alist-get 'suggestions parsed)))
+(defun flywrite-prompt-test--parse-suggestions (response)
+  "Extract the suggestions list from RESPONSE.
+RESPONSE may be a JSON string (from API) or an alist (from cache)."
+  (let ((parsed (if (stringp response)
+                    (flywrite-prompt-test--parse-response-string response)
+                  response)))
+    (or (alist-get 'suggestions parsed)
+        (cdr (assoc "suggestions" parsed)))))
 
 ;;;; ---- Test configuration ----
 
