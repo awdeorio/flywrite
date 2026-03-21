@@ -278,6 +278,26 @@ Returns the number of suggestions from the API (using cache when available)."
          (suggestions (flywrite-prompt-test--parse-suggestions response-text)))
     (length suggestions)))
 
+(defun flywrite-prompt-test--prune-cache ()
+  "Remove cache entries whose prompt hash is not current.
+Also remove orphaned prompts.  Current hashes are computed from
+each style in `flywrite--prompt-alist'."
+  (let ((current-hashes (mapcar (lambda (style-entry)
+                                  (let ((flywrite-system-prompt
+                                         (car style-entry)))
+                                    (md5 (flywrite--get-system-prompt))))
+                                flywrite--prompt-alist)))
+    (setq flywrite-prompt-test--cache
+          (cl-remove-if-not
+           (lambda (entry)
+             (member (alist-get "prompt_hash" entry nil nil #'equal)
+                     current-hashes))
+           flywrite-prompt-test--cache))
+    (setq flywrite-prompt-test--prompts
+          (cl-remove-if-not
+           (lambda (pair) (member (car pair) current-hashes))
+           flywrite-prompt-test--prompts))))
+
 ;;;; ---- ERT tests ----
 
 (defun flywrite-prompt-test--run-all ()
@@ -297,6 +317,8 @@ Return list of (style input expected count pass) tuples."
                  (count (flywrite-prompt-test--run-one input style))
                  (pass (= count expected)))
             (push (list style input expected count pass) results)))))
+    (flywrite-prompt-test--prune-cache)
+    (flywrite-prompt-test--save-cache)
     (nreverse results)))
 
 (ert-deftest flywrite-prompt-test-regression ()
