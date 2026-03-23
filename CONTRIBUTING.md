@@ -28,6 +28,15 @@ Requirements: Emacs 27.1+, an LLM API key (see
 [README](README.md) for provider setup). API key is optional for local
 providers like Ollama.
 
+**Testing with Emacs 27 on macOS.** CI runs tests against Emacs 27.1.
+To reproduce locally on macOS, install Emacs 27 via Homebrew:
+```bash
+brew install emacs-plus@27
+/opt/homebrew/opt/emacs-plus@27/bin/emacs -Q --batch \
+  -l flywrite-mode.el -l test-flywrite.el \
+  -f ert-run-tests-batch-and-exit
+```
+
 The entire package lives in `flywrite-mode.el`. Unit tests are in
 `test-flywrite.el`. Prompt regression tests are in
 `test-flywrite-prompt.el`. Sample files in `samples/` are for manual

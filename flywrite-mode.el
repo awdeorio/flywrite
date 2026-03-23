@@ -223,6 +223,11 @@ without needing to edit."
   "Map from \"beg-end\" region key to the last-known content hash.
 Used by `after-change' to find and remove stale checked-unit entries.")
 
+(defvar flywrite--response-handled nil
+  "Non-nil when a `url-retrieve' callback has already been processed.
+Set buffer-locally in HTTP response buffers to guard against
+duplicate callbacks.")
+
 
 ;;;; ---- Constants ----
 
@@ -419,8 +424,10 @@ Checks font-lock faces and major mode."
       (setq flywrite--diagnostics
             (cl-remove-if
              (lambda (diag)
-               (and (>= (flymake-diagnostic-beg diag) ubeg)
-                    (<= (flymake-diagnostic-end diag) uend)))
+               (let ((dbeg (flymake-diagnostic-beg diag))
+                     (dend (flymake-diagnostic-end diag)))
+                 (or (not (and dbeg dend))
+                     (and (>= dbeg ubeg) (<= dend uend)))))
              flywrite--diagnostics))
       (when (and (/= old-count (length flywrite--diagnostics))
                  flywrite--report-fn)
@@ -1223,12 +1230,15 @@ Eglot replaces the buffer-local value with only its own backend."
   (setq flywrite--diagnostics nil)
   (setq flywrite--report-fn nil)
 
-  ;; Register change-detection hook
-  (add-hook 'after-change-functions #'flywrite--after-change nil t)
-
-  ;; Enable flymake and register our diagnostic backend
+  ;; Enable flymake and register our diagnostic backend.
+  ;; Do this before adding our after-change hook so that our hook is
+  ;; at the head of the list and runs before flymake's hook.
   (unless (bound-and-true-p flymake-mode)
     (flymake-mode 1))
+
+  ;; Register change-detection hook (must come after flymake-mode
+  ;; enablement so our hook is first in after-change-functions)
+  (add-hook 'after-change-functions #'flywrite--after-change nil t)
   (add-hook 'flymake-diagnostic-functions #'flywrite-flymake nil t)
 
   ;; Eglot replaces flymake-diagnostic-functions with only its own
