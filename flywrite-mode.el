@@ -424,8 +424,10 @@ Checks font-lock faces and major mode."
       (setq flywrite--diagnostics
             (cl-remove-if
              (lambda (diag)
-               (and (>= (flymake-diagnostic-beg diag) ubeg)
-                    (<= (flymake-diagnostic-end diag) uend)))
+               (let ((dbeg (flymake-diagnostic-beg diag))
+                     (dend (flymake-diagnostic-end diag)))
+                 (or (not (and dbeg dend))
+                     (and (>= dbeg ubeg) (<= dend uend)))))
              flywrite--diagnostics))
       (when (and (/= old-count (length flywrite--diagnostics))
                  flywrite--report-fn)
