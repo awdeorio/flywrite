@@ -63,7 +63,7 @@ Run `M-x flywrite-mode`.  As you move or type, flywrite will automatically run c
 Writing feedback settings:
 ```elisp
 (setq flywrite-system-prompt 'academic) ; 'prose, 'academic, or custom string
-(setq flywrite-granularity 'sentence)   ; 'sentence or 'paragraph
+(setq flywrite-granularity 'sentence)   ; 'sentence or 'paragraph, sent to LLM
 ```
 
 Performance settings:
