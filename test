@@ -69,6 +69,25 @@ check_quiet \
   -l lint-nesting.el \
   flywrite-mode.el
 
+# Check: README system prompt matches source
+echo "Check: README system prompt matches source"
+diff <( \
+  sed -n '/^(defconst flywrite--academic-prompt$/,/^  "System prompt for academic/{
+    /^(defconst/d
+    /^  "System prompt for/d
+    p
+  }' flywrite-mode.el \
+  | sed '1s/^  "//; $s/"$//' \
+) <( \
+  sed -n '/^(setq flywrite-system-prompt$/,/^```$/{
+    /^(setq/d
+    /^```$/d
+    p
+  }' README.md \
+  | sed '1s/^  "//; $s/")$//' \
+  | grep -vF -e '-- ADD, REMOVE, OR EDIT RULES BELOW --' \
+)
+
 # Unit tests (filter expected flywrite log messages from stderr)
 echo "Unit tests"
 emacs -Q --batch \
