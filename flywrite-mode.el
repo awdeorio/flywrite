@@ -271,7 +271,7 @@ Rules:
   'like' vs 'such as', split infinitives, ending sentences
   with prepositions).  When a comma is optional, do not flag it.
 - Err on the side of not flagging.  Only flag clear, unambiguous errors.
-- Only evaluate prose content.  Ignore markup like LaTeX, HTML, or Org-mode.")
+- Ignore markup like LaTeX, HTML, or Org-mode.")
 
 
 ;; System prompt for academic writing feedback.
@@ -291,7 +291,7 @@ Rules:
 - Keep reasons under 12 words
 - One entry per distinct issue
 - Do not flag correct text
-- Only evaluate prose content.  Ignore markup like LaTeX, HTML, or Org-mode.
+- Ignore markup like LaTeX, HTML, or Org-mode.
 - Flag informal language, contractions, and colloquialisms
 - Flag vague hedging
   (e.g., 'a lot', 'things', 'stuff', 'really')

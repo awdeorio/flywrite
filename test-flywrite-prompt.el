@@ -101,12 +101,12 @@
                     "a file-local variable on the first "
                     "line.  Paragraph 1 has general prose "
                     "errors which should be flagged.  "
-                    "Paragraph 2 has academic-only errors, "
+                    "Paragraph 2 has academic-only errors "
                     "like hedging and weasel words which "
                     "should not be flagged by the prose "
                     "prompt.")
            :description "clean meta-description paragraph"
-           :expected ((prose . 0) (academic . 3)))
+           :expected ((prose . 0) (academic . 0)))
     (:text ,(concat "I think that this is obviously the most "
                     "important thing we need to address. We "
                     "found that the treatment significantly "
@@ -149,6 +149,9 @@ expected suggestion count, e.g., ((prose . 0) (academic . 2)).
 Every style in `flywrite--prompt-alist' must have an entry.")
 
 ;;;; ---- Cache ----
+
+(defvar flywrite-prompt-test--max-concurrent 8
+  "Maximum number of concurrent API requests during prompt tests.")
 
 (defvar flywrite-prompt-test--cache-file
   (expand-file-name "test-flywrite-prompt-cache.json"
@@ -282,7 +285,34 @@ If RESPONSE cannot be parsed, the entry is stored with an error marker."
     (push entry flywrite-prompt-test--cache)
     (flywrite-prompt-test--save-cache)))
 
-;;;; ---- Synchronous API call ----
+;;;; ---- API call helpers ----
+
+(defun flywrite-prompt-test--extract-response (response-buf)
+  "Extract the LLM response text from RESPONSE-BUF.
+Returns the response string, or nil on error.  Kills RESPONSE-BUF."
+  (unwind-protect
+      (flywrite-prompt-test--parse-response-buf response-buf)
+    (when (buffer-live-p response-buf)
+      (kill-buffer response-buf))))
+
+(defun flywrite-prompt-test--parse-response-buf (buf)
+  "Parse BUF as an HTTP response and return the LLM text, or nil."
+  (when (buffer-live-p buf)
+    (with-current-buffer buf
+      (condition-case nil
+          (cl-destructuring-bind (_status json resp-text)
+              (flywrite--extract-response-text)
+            (let ((stop
+                   (or (alist-get 'stop_reason json)
+                       (let* ((choices (alist-get 'choices json))
+                              (c (and (arrayp choices)
+                                      (> (length choices) 0)
+                                      (aref choices 0))))
+                         (and c (alist-get 'finish_reason c))))))
+              (when (equal stop "max_tokens")
+                (message "  [WARN] Response truncated (max_tokens)")))
+            resp-text)
+        (error nil)))))
 
 (defun flywrite-prompt-test--call-api (text)
   "Send TEXT to the LLM API synchronously and return the response string.
@@ -298,22 +328,8 @@ Uses flywrite configuration for URL, model, API key, and system prompt."
           (url-retrieve-synchronously flywrite-api-url t nil 30)))
     (unless response-buf
       (error "API call returned no response buffer"))
-    (unwind-protect
-        (with-current-buffer response-buf
-          (cl-destructuring-bind (_status json resp-text)
-              (flywrite--extract-response-text)
-            (unless resp-text
-              (error "No text in API response"))
-            (let ((stop (or (alist-get 'stop_reason json)
-                            (let* ((choices (alist-get 'choices json))
-                                   (c (and (arrayp choices)
-                                           (> (length choices) 0)
-                                           (aref choices 0))))
-                              (and c (alist-get 'finish_reason c))))))
-              (when (equal stop "max_tokens")
-                (message "  [WARN] Response truncated (max_tokens)"))
-              resp-text)))
-      (kill-buffer response-buf))))
+    (or (flywrite-prompt-test--extract-response response-buf)
+        (error "No text in API response"))))
 
 (defun flywrite-prompt-test--parse-suggestions (response)
   "Extract the suggestions list from RESPONSE.
@@ -334,39 +350,107 @@ Uses Anthropic as the default provider."
 
 ;;;; ---- Core test runner ----
 
-(defun flywrite-prompt-test--run-one (input style)
-  "Run a single prompt test for INPUT plist with prompt STYLE.
-STYLE is a symbol from `flywrite--prompt-alist' (e.g., `prose' or `academic').
-Returns a cons (COUNT . SUGGESTIONS) where COUNT is the number of
-suggestions and SUGGESTIONS is the list returned by the API."
+(defun flywrite-prompt-test--build-jobs ()
+  "Build a list of test jobs for all (style, input) pairs.
+Each job is a plist with :style, :input, :text, :model, :prompt-hash,
+:temperature, :prompt-text, :expected, and :cached (the cache entry or nil)."
   (flywrite-prompt-test--configure)
-  (let* ((flywrite-system-prompt style)
-         (text (plist-get input :text))
-         (model (flywrite--effective-model))
-         (temperature flywrite-api-temperature)
-         (prompt-text (flywrite--get-system-prompt))
-         (prompt-hash (md5 prompt-text))
-         (cached (flywrite-prompt-test--cache-lookup
-                  text model prompt-hash temperature))
-         (response-text
-          (if cached
-              (progn
-                (message "  [cached] [%s] %s"
-                         style (plist-get input :description))
-                (alist-get "response" cached nil nil #'equal))
-            (message "  [api] [%s] %s"
-                     style (plist-get input :description))
-            (let ((resp (flywrite-prompt-test--call-api text)))
-              (flywrite-prompt-test--cache-store
-               text model prompt-hash temperature prompt-text resp)
-              resp)))
+  (cl-loop for style-entry in flywrite--prompt-alist
+           for style = (car style-entry)
+           nconc
+           (mapcar
+            (lambda (input)
+              (let* ((flywrite-system-prompt style)
+                     (text (plist-get input :text))
+                     (model (flywrite--effective-model))
+                     (temperature flywrite-api-temperature)
+                     (prompt-text (flywrite--get-system-prompt))
+                     (prompt-hash (md5 prompt-text))
+                     (expected-alist (plist-get input :expected))
+                     (expected (alist-get style expected-alist 'missing))
+                     (cached (flywrite-prompt-test--cache-lookup
+                              text model prompt-hash temperature)))
+                (when (eq expected 'missing)
+                  (error
+                   "No expected count for style `%s' in input: %s"
+                   style (plist-get input :description)))
+                (list :style style :input input :text text
+                      :model model :prompt-hash prompt-hash
+                      :temperature temperature
+                      :prompt-text prompt-text
+                      :expected expected :cached cached)))
+            flywrite-prompt-test--inputs)))
+
+(defun flywrite-prompt-test--fetch-uncached (jobs)
+  "Fetch API responses for uncached JOBS concurrently.
+JOBS is a list of plists (from `flywrite-prompt-test--build-jobs')
+where :cached is nil.  Returns an alist mapping each job to its
+raw response string.  Up to `flywrite-prompt-test--max-concurrent'
+requests run in parallel."
+  (let ((api-key (or (getenv "FLYWRITE_API_KEY_ANTHROPIC")
+                     (error
+                      "No API key.  Set FLYWRITE_API_KEY_ANTHROPIC")))
+        (pending (copy-sequence jobs))
+        (in-flight 0)
+        (results nil))
+    (cl-labels
+        ((dispatch-next ()
+           (when (and pending
+                      (< in-flight
+                         flywrite-prompt-test--max-concurrent))
+             (let* ((job (pop pending))
+                    (flywrite-system-prompt (plist-get job :style))
+                    (text (plist-get job :text))
+                    (request (flywrite--build-request text api-key))
+                    (url-request-method "POST")
+                    (url-request-extra-headers (cdr request))
+                    (url-request-data
+                     (encode-coding-string (car request) 'utf-8)))
+               (message "  [api] [%s] %s"
+                        (plist-get job :style)
+                        (plist-get (plist-get job :input)
+                                   :description))
+               (cl-incf in-flight)
+               (url-retrieve
+                flywrite-api-url
+                (lambda (status)
+                  (ignore status)
+                  (let ((resp
+                         (flywrite-prompt-test--extract-response
+                          (current-buffer))))
+                    (cl-decf in-flight)
+                    (push (cons job resp) results)
+                    (flywrite-prompt-test--cache-store
+                     (plist-get job :text)
+                     (plist-get job :model)
+                     (plist-get job :prompt-hash)
+                     (plist-get job :temperature)
+                     (plist-get job :prompt-text)
+                     (or resp ""))
+                    (dispatch-next)))
+                nil t t)
+               (dispatch-next)))))
+      (dispatch-next)
+      (while (> in-flight 0)
+        (accept-process-output nil 0.1)))
+    results))
+
+(defun flywrite-prompt-test--evaluate-job (job response)
+  "Evaluate a single test JOB against RESPONSE.
+RESPONSE is the raw API response string or a cached response alist.
+Returns (style input expected count suggestions pass)."
+  (let* ((style (plist-get job :style))
+         (input (plist-get job :input))
+         (expected (plist-get job :expected))
          (suggestions
           (condition-case nil
-              (flywrite-prompt-test--parse-suggestions response-text)
+              (flywrite-prompt-test--parse-suggestions response)
             (error
              (message "  [WARN] JSON parse error, treating as 0")
-             nil))))
-    (cons (length suggestions) suggestions)))
+             nil)))
+         (count (length suggestions))
+         (pass (= count expected)))
+    (list style input expected count suggestions pass)))
 
 (defun flywrite-prompt-test--prune-cache ()
   "Remove cache entries whose prompt hash is not current.
@@ -392,36 +476,53 @@ each style in `flywrite--prompt-alist'."
 
 (defun flywrite-prompt-test--run-all ()
   "Run all prompt regression tests for every prompt style.
-Return list of (style input expected count suggestions pass) tuples."
+Return list of (style input expected count suggestions pass) tuples.
+Uncached API calls run concurrently, up to
+`flywrite-prompt-test--max-concurrent' at a time."
   (flywrite-prompt-test--load-cache)
-  ;; Build flat list of (style . input) pairs across all prompt styles.
-  (let ((pairs (cl-loop for style-entry in flywrite--prompt-alist
-                        for style = (car style-entry)
-                        nconc (mapcar (lambda (input) (cons style input))
-                                      flywrite-prompt-test--inputs)))
-        (results nil)
-        (prev-style nil))
-    (dolist (pair pairs)
-      (let* ((style (car pair))
-             (input (cdr pair))
-             (expected-alist (plist-get input :expected))
-             (expected (alist-get style expected-alist 'missing))
-             (_ (when (eq expected 'missing)
-                  (error
-                   "No expected count for style `%s' in input: %s"
-                   style (plist-get input :description))))
-             (result (flywrite-prompt-test--run-one input style))
-             (count (car result))
-             (suggestions (cdr result))
-             (pass (= count expected)))
-        (unless (eq style prev-style)
-          (message "Testing prompt: %s" style)
-          (setq prev-style style))
-        (push (list style input expected count suggestions pass)
-              results)))
+  (let* ((all-jobs (flywrite-prompt-test--build-jobs))
+         (cached-jobs (cl-remove-if-not
+                       (lambda (j) (plist-get j :cached)) all-jobs))
+         (uncached-jobs (cl-remove-if
+                         (lambda (j) (plist-get j :cached)) all-jobs))
+         ;; Log cached hits.
+         (_ (dolist (job cached-jobs)
+              (message "  [cached] [%s] %s"
+                       (plist-get job :style)
+                       (plist-get (plist-get job :input)
+                                  :description))))
+         ;; Fetch all uncached concurrently.
+         (fetched (when uncached-jobs
+                    (message "Fetching %d uncached test(s) (%d concurrent)..."
+                             (length uncached-jobs)
+                             (min (length uncached-jobs)
+                                  flywrite-prompt-test--max-concurrent))
+                    (flywrite-prompt-test--fetch-uncached uncached-jobs)))
+         ;; Build a lookup from fetched results: (style . text) -> resp.
+         (fetch-table (let ((ht (make-hash-table :test 'equal)))
+                        (dolist (pair fetched)
+                          (let ((job (car pair)))
+                            (puthash
+                             (cons (plist-get job :style)
+                                   (plist-get job :text))
+                             (cdr pair) ht)))
+                        ht))
+         ;; Evaluate all jobs in original order.
+         (results
+          (mapcar
+           (lambda (job)
+             (let* ((cached (plist-get job :cached))
+                    (response
+                     (if cached
+                         (alist-get "response" cached nil nil #'equal)
+                       (gethash (cons (plist-get job :style)
+                                      (plist-get job :text))
+                                fetch-table))))
+               (flywrite-prompt-test--evaluate-job job response)))
+           all-jobs)))
     (flywrite-prompt-test--prune-cache)
     (flywrite-prompt-test--save-cache)
-    (nreverse results)))
+    results))
 
 (ert-deftest flywrite-prompt-test-regression ()
   "Verify system prompts correctly catch or ignore writing flaws.
