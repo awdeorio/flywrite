@@ -1,4 +1,4 @@
-;;; test-flywrite.el --- ERT tests for flywrite-mode -*- lexical-binding: t; -*-
+;;; test-flywrite.el --- ERT tests for flywrite-mode -*- lexical-binding: t; indent-tabs-mode: nil; -*-
 
 ;;; Commentary:
 

@@ -1,4 +1,4 @@
-;;; test-flywrite-prompt.el --- Prompt regression tests -*- lexical-binding: t; -*-
+;;; test-flywrite-prompt.el --- Prompt regression tests -*- lexical-binding: t; indent-tabs-mode: nil; -*-
 
 ;;; Commentary:
 

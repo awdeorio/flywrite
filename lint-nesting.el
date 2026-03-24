@@ -1,4 +1,4 @@
-;;; lint-nesting.el --- Check control-flow nesting depth -*- lexical-binding: t; -*-
+;;; lint-nesting.el --- Check control-flow nesting depth -*- lexical-binding: t; indent-tabs-mode: nil; -*-
 
 ;; Usage: emacs -Q --batch -l lint-nesting.el
 

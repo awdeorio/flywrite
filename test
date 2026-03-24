@@ -47,7 +47,6 @@ emacs -Q --batch \
   --eval "(require 'elisp-lint)" \
   -f elisp-lint-files-batch \
   --no-indent \
-  --no-indent-character \
   --no-fill-column \
   flywrite-mode.el
 

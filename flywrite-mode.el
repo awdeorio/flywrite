@@ -1,4 +1,4 @@
-;;; flywrite-mode.el --- Inline writing suggestions via LLM -*- lexical-binding: t; -*-
+;;; flywrite-mode.el --- Inline writing suggestions via LLM -*- lexical-binding: t; indent-tabs-mode: nil; -*-
 
 ;; Copyright (C) 2026 Andrew DeOrio
 
