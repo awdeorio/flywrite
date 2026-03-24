@@ -26,7 +26,7 @@ The `./test` script runs these checks in order:
 1. **Byte-compile** with warnings-as-errors
 2. **elint** — Emacs Lisp lint
 3. **elisp-lint** — installed from MELPA on first run (includes checkdoc)
-4. **Nesting depth** — custom `lint-nesting.el`, max control-flow depth of 6
+4. **Nesting depth** — custom `lint-nesting.el`, max control-flow depth of 5
 5. **ERT unit tests** — `test-flywrite.el`
 
 **Byte-compile check** (standalone):
@@ -91,6 +91,6 @@ Key design decisions:
 - No default keybindings; commands available via `M-x`
 - Diagnostics are tagged with `[flywrite]` suffix in messages
 - 80-character line width
-- Logical nesting depth: prefer 4-5 levels, hard limit of 6 (enforced by `lint-nesting.el`; counted forms include `if`, `when`, `let`, `save-excursion`, `condition-case`, etc.)
+- Logical nesting depth: prefer 4 levels, hard limit of 5 (enforced by `lint-nesting.el`; counted forms include `if`, `when`, `let`, `save-excursion`, `condition-case`, etc.)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributing guide.

@@ -328,19 +328,28 @@ each style in `flywrite--prompt-alist'."
   "Run all prompt regression tests for every prompt style.
 Return list of (style input expected count pass) tuples."
   (flywrite-prompt-test--load-cache)
-  (let ((results nil))
-    (dolist (style-entry flywrite--prompt-alist)
-      (let ((style (car style-entry)))
-        (message "Testing prompt: %s" style)
-        (dolist (input flywrite-prompt-test--inputs)
-          (let* ((expected-alist (plist-get input :expected))
-                 (expected (alist-get style expected-alist 'missing))
-                 (_ (when (eq expected 'missing)
-                      (error "No expected count for style `%s' in input: %s"
-                             style (plist-get input :description))))
-                 (count (flywrite-prompt-test--run-one input style))
-                 (pass (= count expected)))
-            (push (list style input expected count pass) results)))))
+  ;; Build flat list of (style . input) pairs across all prompt styles.
+  (let ((pairs (cl-loop for style-entry in flywrite--prompt-alist
+                        for style = (car style-entry)
+                        nconc (mapcar (lambda (input) (cons style input))
+                                      flywrite-prompt-test--inputs)))
+        (results nil)
+        (prev-style nil))
+    (dolist (pair pairs)
+      (let* ((style (car pair))
+             (input (cdr pair))
+             (expected-alist (plist-get input :expected))
+             (expected (alist-get style expected-alist 'missing))
+             (_ (when (eq expected 'missing)
+                  (error
+                   "No expected count for style `%s' in input: %s"
+                   style (plist-get input :description))))
+             (count (flywrite-prompt-test--run-one input style))
+             (pass (= count expected)))
+        (unless (eq style prev-style)
+          (message "Testing prompt: %s" style)
+          (setq prev-style style))
+        (push (list style input expected count pass) results)))
     (flywrite-prompt-test--prune-cache)
     (flywrite-prompt-test--save-cache)
     (nreverse results)))

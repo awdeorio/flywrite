@@ -4,7 +4,7 @@
 
 ;;; Code:
 
-(defvar lint-nesting-max-depth 6
+(defvar lint-nesting-max-depth 5
   "Maximum allowed control-flow nesting depth.")
 
 (defvar lint-nesting-file nil

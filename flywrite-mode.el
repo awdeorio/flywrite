@@ -662,58 +662,83 @@ Signal an error if configuration is invalid, preventing mode activation."
      (signal (car err) (cdr err)))))
 
 
-(defun flywrite--send-request (buf beg end hash)
+(cl-defun flywrite--send-request (buf beg end hash)
   "Send an API request for the text in BUF between BEG and END.
 HASH is the content hash at time of dispatch for stale checking."
   ;; Skip if already checked (catches duplicates from queue)
-  (if (with-current-buffer buf
-        (gethash hash flywrite--checked-units))
-      (flywrite--log "Skipping already-checked hash=%s" hash)
-    (unless flywrite-api-url
-      (flywrite--log "ERROR: flywrite-api-url is not set")
-      (error "Set flywrite-api-url before use, see README"))
+  (when (with-current-buffer buf
+          (gethash hash flywrite--checked-units))
+    (flywrite--log "Skipping already-checked hash=%s" hash)
+    (cl-return-from flywrite--send-request))
 
-    ;; Extract text and build the HTTP request (headers + JSON payload).
-    (condition-case err
-        (let* ((text (with-current-buffer buf
-                       (buffer-substring-no-properties beg end)))
-               (api-key (flywrite--get-api-key))
-               (_ (when (and (flywrite--anthropic-api-p) (not api-key))
-                    (error "An API key is required for the Anthropic API")))
-               (request (flywrite--build-request text api-key))
-               (payload (car request))
-               (url-request-method "POST")
-               (url-request-extra-headers (cdr request))
-               (url-request-data (encode-coding-string payload 'utf-8))
-               (start-time (current-time)))
-          (flywrite--log "API call: [%d-%d] buf=%s url=%s text=%.80s hash=%s"
-                         beg end (buffer-name buf) flywrite-api-url text hash)
+  ;; Extract text from the source buffer, build headers + JSON payload,
+  ;; and fire the async HTTP request.
+  (condition-case err
+      (let* ((text (with-current-buffer buf
+                     (buffer-substring-no-properties beg end)))
 
-          ;; Increment in-flight counter and mark hash as checked before the
-          ;; async call so that no duplicate request is dispatched while this
-          ;; one is still in progress.
-          (with-current-buffer buf
-            (cl-incf flywrite--in-flight)
-            (puthash hash t flywrite--checked-units))
+             ;; Resolve API key and build the request
+             (api-key (flywrite--get-api-key))
+             (_ (when (and (flywrite--anthropic-api-p) (not api-key))
+                  (error "An API key is required for the Anthropic API")))
+             (request (flywrite--build-request text api-key))
+             (payload (car request))
 
-          ;; Fire async HTTP request; track the connection buffer for cleanup.
-          (let ((conn-buf
-                 (url-retrieve
-                  flywrite-api-url
-                  (lambda (status)
-                    (flywrite--handle-response
-                     status buf beg end hash start-time))
-                  nil t t)))
-            (when (and conn-buf (buffer-live-p conn-buf))
-              (with-current-buffer buf
-                (push conn-buf flywrite--connection-buffers)))))
-      (error
-       (flywrite--log "Request error: %s url=%s hash=%s"
-                      (error-message-string err) flywrite-api-url hash)
-       (message "flywrite: request error, check *flywrite-log* for details")))))
+             ;; Bind url-retrieve dynamic variables
+             (url-request-method "POST")
+             (url-request-extra-headers (cdr request))
+             (url-request-data (encode-coding-string payload 'utf-8))
+             (start-time (current-time)))
+
+        (flywrite--log "API call: [%d-%d] buf=%s url=%s text=%.80s hash=%s"
+                       beg end (buffer-name buf) flywrite-api-url text hash)
+
+        ;; Increment in-flight counter and mark hash as checked before the
+        ;; async call so that no duplicate request is dispatched while this
+        ;; one is still in progress.
+        (with-current-buffer buf
+          (cl-incf flywrite--in-flight)
+          (puthash hash t flywrite--checked-units))
+
+        ;; Fire async HTTP request; track the connection buffer for cleanup.
+        (let ((conn-buf
+               (url-retrieve
+                flywrite-api-url
+                (lambda (status)
+                  (flywrite--handle-response
+                   status buf beg end hash start-time))
+                nil t t)))
+          (when (and conn-buf (buffer-live-p conn-buf))
+            (with-current-buffer buf
+              (push conn-buf flywrite--connection-buffers)))))
+    (error
+     (flywrite--log "Request error: %s url=%s hash=%s"
+                    (error-message-string err) flywrite-api-url hash)
+     (message
+      "flywrite: request error, check *flywrite-log* for details"))))
 
 
 ;;;; ---- Response handler helpers ----
+
+
+(defun flywrite--response-body-snippet ()
+  "Return the first 500 characters of the HTTP response body.
+Assumes the current buffer contains a raw HTTP response.
+Returns nil if no body separator is found."
+  (save-excursion
+    (goto-char (point-min))
+    (when (re-search-forward "\r?\n\r?\n" nil t)
+      (truncate-string-to-width
+       (buffer-substring-no-properties (point) (point-max))
+       500 nil nil t))))
+
+
+(defun flywrite--flush-queue ()
+  "Clear the pending queue in the current buffer."
+  (when flywrite--pending-queue
+    (flywrite--log "Clearing %d queued requests"
+                   (length flywrite--pending-queue))
+    (setq flywrite--pending-queue nil)))
 
 
 (defun flywrite--duplicate-callback-p (response-buf hash)
@@ -734,12 +759,7 @@ Marks the buffer as handled on first call.  HASH is for logging."
 BUF is the source buffer, LATENCY and HASH are for logging.
 Clears the pending queue on 429 rate-limit errors."
   (when-let ((err-info (plist-get status :error)))
-    (let ((err-body (save-excursion
-                      (goto-char (point-min))
-                      (when (re-search-forward "\r?\n\r?\n" nil t)
-                        (truncate-string-to-width
-                         (buffer-substring-no-properties (point) (point-max))
-                         500 nil nil t)))))
+    (let ((err-body (flywrite--response-body-snippet)))
       (flywrite--log "API HTTP error: %s (%.2fs) hash=%s\nResponse body: %s"
                      err-info latency hash (or err-body "<empty>"))
 
@@ -747,19 +767,12 @@ Clears the pending queue on 429 rate-limit errors."
       ;; hammering the API.
       (when (and (listp err-info)
                  (or (member 429 err-info) (member 529 err-info)))
-        (flywrite--log "%s (%d) hash=%s"
-                       (if (member 429 err-info)
-                           "Rate limited" "API overloaded")
-                       (if (member 429 err-info) 429 529) hash)
-        (when (buffer-live-p buf)
-          (with-current-buffer buf
-            (when flywrite--pending-queue
-              (flywrite--log "Clearing %d queued requests due to %s hash=%s"
-                             (length flywrite--pending-queue)
-                             (if (member 429 err-info)
-                                 "rate limit" "API overload")
-                             hash)
-              (setq flywrite--pending-queue nil)))))
+        (let ((reason (if (member 429 err-info)
+                          "rate limit" "API overload")))
+          (flywrite--log "%s hash=%s" reason hash)
+          (when (buffer-live-p buf)
+            (with-current-buffer buf
+              (flywrite--flush-queue)))))
       (error (if (and (listp err-info) (member 529 err-info))
                  "API overloaded (529), try again later"
                (format "API request failed: %s" err-info))))))
@@ -910,48 +923,47 @@ Called with the response buffer current.  May signal on errors."
           (flywrite--apply-suggestions buf beg end hash text))))))
 
 
-(defun flywrite--handle-response (status buf beg end hash start-time)
+(cl-defun flywrite--handle-response (status buf beg end hash start-time)
   "Handle API response.
 STATUS is from `url-retrieve'.  BUF, BEG, END, HASH identify the
 request.  START-TIME is used for latency logging."
   (let ((latency (float-time (time-subtract (current-time) start-time)))
         (response-buf (current-buffer)))
-    (if (flywrite--duplicate-callback-p response-buf hash)
-        (when (buffer-live-p response-buf)
-          (kill-buffer response-buf))
 
-      ;; Remove from connection tracking
+    ;; Ignore duplicate callbacks from url-retrieve
+    (when (flywrite--duplicate-callback-p response-buf hash)
+      (when (buffer-live-p response-buf)
+        (kill-buffer response-buf))
+      (cl-return-from flywrite--handle-response))
+
+    ;; Remove from connection tracking
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (setq flywrite--connection-buffers
+              (delq response-buf flywrite--connection-buffers))))
+
+    ;; Process the response; always decrement in-flight and drain queue.
+    (unwind-protect
+        (condition-case err
+            (flywrite--process-response status buf beg end hash latency)
+          (error
+           (let ((body (ignore-errors
+                         (flywrite--response-body-snippet))))
+             (flywrite--log "Response handler error: %s hash=%s\n%s"
+                            (error-message-string err) hash
+                            (or body "<empty>"))
+             (message "flywrite: %s" (error-message-string err)))))
+
+      ;; Always: decrement counter and drain queue
       (when (buffer-live-p buf)
         (with-current-buffer buf
-          (setq flywrite--connection-buffers
-                (delq response-buf flywrite--connection-buffers))))
-      (unwind-protect
-          (condition-case err
-              (flywrite--process-response status buf beg end hash latency)
-            (error
-             (let ((body (ignore-errors
-                           (save-excursion
-                             (goto-char (point-min))
-                             (when (re-search-forward "\r?\n\r?\n" nil t)
-                               (truncate-string-to-width
-                                (buffer-substring-no-properties
-                                 (point) (point-max))
-                                500 nil nil t))))))
-               (flywrite--log "Response handler error: %s hash=%s\n%s"
-                              (error-message-string err) hash
-                              (or body "<empty>"))
-               (message "flywrite: %s" (error-message-string err)))))
+          (cl-decf flywrite--in-flight)
+          (when (< flywrite--in-flight 0)
+            (setq flywrite--in-flight 0))
+          (flywrite--drain-queue)))
 
-        ;; Always: decrement counter and drain queue
-        (when (buffer-live-p buf)
-          (with-current-buffer buf
-            (cl-decf flywrite--in-flight)
-            (when (< flywrite--in-flight 0)
-              (setq flywrite--in-flight 0))
-            (flywrite--drain-queue)))
-
-        ;; Clean up response buffer
-        (kill-buffer response-buf)))))
+      ;; Clean up response buffer
+      (kill-buffer response-buf))))
 
 
 ;;;; ---- Idle timer callback ----

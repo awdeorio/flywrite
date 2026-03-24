@@ -93,10 +93,11 @@ emacs \
   "$EL_FILE_PACKAGE"
 rm -f flywrite-autoloads.el flywrite-autoloads.elc
 
-# Lint: nesting depth (control-flow forms only, max depth 6)
+# Lint: nesting depth (control-flow forms only, max depth 5)
 echo "Lint: nesting depth"
 emacs \
   -Q --batch \
+  --eval '(setq lint-nesting-max-depth 5)' \
   -l lint-nesting.el \
   "${EL_FILES[@]}"
 

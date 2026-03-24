@@ -54,7 +54,7 @@ The `./test` script runs these checks:
 2. **checkdoc** -- docstring style
 3. **elint** -- Emacs Lisp lint
 4. **elisp-lint** -- installed from MELPA on first run
-5. **Nesting depth** -- custom `lint-nesting.el`, max depth of 6
+5. **Nesting depth** -- custom `lint-nesting.el`, max depth of 5
 6. **ERT unit tests** -- `test-flywrite.el`
 7. **Prompt regression tests** -- `test-flywrite-prompt.el`
 
@@ -106,7 +106,7 @@ See [`samples/README.md`](samples/README.md) for file descriptions.
 ## Code style
 - Follow [Emacs Lisp conventions](https://www.gnu.org/software/emacs/manual/html_node/elisp/Tips.html) and the [Emacs Lisp Style Guide](https://github.com/bbatsov/emacs-lisp-style-guide).
 - 80-character line width
-- Logical nesting depth: prefer 4--5 levels, hard limit of 6
+- Logical nesting depth: prefer 4 levels, hard limit of 5
   (enforced by `lint-nesting.el`)
 
 Design
