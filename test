@@ -69,6 +69,21 @@ check_quiet \
   -l lint-nesting.el \
   flywrite-mode.el
 
+# Unit tests (filter expected flywrite log messages from stderr)
+echo "Unit tests"
+emacs -Q --batch \
+  -l flywrite-mode.el \
+  -l test-flywrite.el \
+  -f ert-run-tests-batch-and-exit \
+  2>&1 | grep -v '^flywrite:' >&2
+
+# Prompt regression tests (requires API key or cached responses)
+echo "Prompt regression tests"
+emacs -Q --batch \
+ -l flywrite-mode.el \
+ -l test-flywrite-prompt.el \
+ -f ert-run-tests-batch-and-exit
+
 # Check: README system prompt matches source
 echo "Check: README system prompt matches source"
 diff <( \
@@ -87,18 +102,3 @@ diff <( \
   | sed '1s/^  "//; $s/")$//' \
   | grep -vF -e '-- ADD, REMOVE, OR EDIT RULES BELOW --' \
 )
-
-# Unit tests (filter expected flywrite log messages from stderr)
-echo "Unit tests"
-emacs -Q --batch \
-  -l flywrite-mode.el \
-  -l test-flywrite.el \
-  -f ert-run-tests-batch-and-exit \
-  2>&1 | grep -v '^flywrite:' >&2
-
-# Prompt regression tests (requires API key or cached responses)
-echo "Prompt regression tests"
-emacs -Q --batch \
- -l flywrite-mode.el \
- -l test-flywrite-prompt.el \
- -f ert-run-tests-batch-and-exit
