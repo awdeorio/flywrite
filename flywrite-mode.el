@@ -1207,20 +1207,28 @@ Prompts for confirmation when the count exceeds
 (defun flywrite-set-prompt (style)
   "Set the system prompt for the current buffer.
 STYLE is a symbol from `flywrite--prompt-alist' (e.g., `prose'
-or `academic'), chosen interactively with completion."
+or `academic'), chosen interactively with completion.  When the
+current prompt is a custom string, \"custom\" appears as an option
+that preserves it."
   (interactive
    (let* ((styles (mapcar (lambda (c) (symbol-name (car c)))
                           flywrite--prompt-alist))
-          (current (if (symbolp flywrite-system-prompt)
-                       (symbol-name flywrite-system-prompt)
-                     nil))
+          (custom-p (stringp flywrite-system-prompt))
+          (current (if custom-p "custom"
+                     (symbol-name flywrite-system-prompt)))
+          (candidates (if custom-p
+                          (append styles '("custom"))
+                        styles))
           (choice (completing-read
                    (format "Prompt style (current: %s): "
-                           (or current "custom"))
-                   styles nil t nil nil current)))
-     (list (intern choice))))
+                           current)
+                   candidates nil t nil nil current)))
+     (list (if (string= choice "custom")
+               flywrite-system-prompt
+             (intern choice)))))
   (setq-local flywrite-system-prompt style)
-  (message "flywrite: prompt set to %s" style))
+  (message "flywrite: prompt set to %s"
+           (if (stringp style) "custom" style)))
 
 
 (defun flywrite--prompt-watcher (_symbol newval operation where)
