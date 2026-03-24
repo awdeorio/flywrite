@@ -263,6 +263,11 @@ Rules:
 - Keep reasons under 12 words
 - One entry per distinct issue
 - Do not flag correct text
+- Focus on objective errors: misspellings, wrong words
+  (e.g., affect/effect, there/their), subject-verb disagreement,
+  pronoun case, missing or wrong punctuation, and redundant words.
+- Do not flag sentence length, structure preferences, or subjective
+  style choices.
 - Only evaluate prose content.  Ignore markup like LaTeX, HTML, or Org-mode.")
 
 

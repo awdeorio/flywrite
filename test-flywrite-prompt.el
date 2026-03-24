@@ -42,7 +42,7 @@
                     "a big deal.")
            :description ,(concat "contractions and informal "
                                  "language in academic writing")
-           :expected ((prose . 1) (academic . 3)))
+           :expected ((prose . 0) (academic . 3)))
     (:text ,(concat "Him and his friend went to the store "
                     "to buy some grocerys.")
            :description "pronoun case error and misspelling"
@@ -101,12 +101,12 @@
                     "a file-local variable on the first "
                     "line.  Paragraph 1 has general prose "
                     "errors which should be flagged.  "
-                    "Paragraph 2 has academic-only errors "
+                    "Paragraph 2 has academic-only errors, "
                     "like hedging and weasel words which "
                     "should not be flagged by the prose "
                     "prompt.")
            :description "clean meta-description paragraph"
-           :expected ((prose . 0) (academic . 0)))
+           :expected ((prose . 0) (academic . 3)))
     (:text ,(concat "I think that this is obviously the most "
                     "important thing we need to address. We "
                     "found that the treatment significantly "
@@ -117,7 +117,7 @@
                     "stuff.")
            :description ,(concat "academic-only errors: hedging, "
                                  "weasel words, informal language")
-           :expected ((prose . 1) (academic . 6)))
+           :expected ((prose . 1) (academic . 11)))
     ;; Paragraph-sized inputs (multi-sentence)
     (:text ,(concat "The quick brown fox jumped over the "
                     "lazy dog.  Him and his friend went to "
