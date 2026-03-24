@@ -35,7 +35,7 @@ ELINT_INIT='(progn
   (setq command-line-args-left nil)
   (with-current-buffer "*Elint*"
     (let ((output (buffer-string)))
-      (unless (string-empty-p output)
+      (unless (string= output "")
         (princ output)
         (kill-emacs 1)))))'
 echo "Lint: elint"

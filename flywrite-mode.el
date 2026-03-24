@@ -522,7 +522,7 @@ Signal an error if the file is set but not readable."
                   (insert-file-contents flywrite-api-key-file)
                   (buffer-substring-no-properties
                    (point-min) (line-end-position))))))
-      (unless (string-empty-p key) key))))
+      (unless (string= key "") key))))
 
 
 (defun flywrite--get-api-key ()
