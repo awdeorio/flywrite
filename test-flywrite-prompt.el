@@ -35,7 +35,7 @@
      :expected ((prose . 0) (academic . 0)))
     (:text "The results don't support the hypothesis, and it's really not a big deal."
      :description "contractions and informal language in academic writing"
-     :expected ((prose . 1) (academic . 2)))
+     :expected ((prose . 1) (academic . 3)))
     (:text "Him and his friend went to the store to buy some grocerys."
      :description "pronoun case error and misspelling"
      :expected ((prose . 2) (academic . 2)))
