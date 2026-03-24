@@ -572,13 +572,13 @@ providers."
          (payload (json-encode
                    (if anthropic-p
                        `((model . ,model)
-                         (max_tokens . 300)
+                         (max_tokens . 4096)
                          (temperature . ,flywrite-api-temperature)
                          (system . ,system-msg)
                          (messages . [((role . "user")
                                        (content . ,text))]))
                      `((model . ,model)
-                       (max_tokens . 300)
+                       (max_tokens . 4096)
                        (temperature . ,flywrite-api-temperature)
                        (messages . [((role . "system")
                                      (content . ,prompt))
@@ -806,12 +806,15 @@ When stale, removes the old hash and re-dirties the paragraph."
 
 (defun flywrite--parse-response-json (text)
   "Parse TEXT as JSON, stripping markdown code fences if present.
-TEXT is the raw LLM response string.  Returns the parsed alist."
+TEXT is the raw LLM response string.  Returns the parsed alist.
+Also strips trailing commas before ] or } which some LLMs produce."
   (let* ((json-array-type 'list)
          (clean (replace-regexp-in-string
                  "\\`[ \t\n]*```\\(?:json\\)?[ \t]*\n?" ""
                  (replace-regexp-in-string
-                  "\n?```[ \t\n]*\\'" "" text))))
+                  "\n?```[ \t\n]*\\'" "" text)))
+         (clean (replace-regexp-in-string
+                 ",[ \t\n]*\\([]}]\\)" "\\1" clean)))
     (json-read-from-string clean)))
 
 
