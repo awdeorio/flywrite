@@ -95,7 +95,32 @@
            :description ,(concat "informal transition, subjective "
                                  "qualifier, ambiguous \"this\", "
                                  "vague term")
-           :expected ((prose . 1) (academic . 4))))
+           :expected ((prose . 1) (academic . 4)))
+    ;; Paragraph-sized inputs (multi-sentence)
+    (:text ,(concat "The quick brown fox jumped over the "
+                    "lazy dog.  Him and his friend went to "
+                    "the store to buy some grocerys.  The "
+                    "weather was very extremely hot outside "
+                    "yesterday.")
+           :description ,(concat "paragraph with pronoun case, "
+                                 "misspelling, and redundant "
+                                 "intensifiers")
+           :expected ((prose . 3) (academic . 3)))
+    (:text ,(concat "The morning light filtered through the "
+                    "curtains and cast long shadows across "
+                    "the floor.  She picked up her coffee, "
+                    "took a quiet sip, and turned to the "
+                    "first page of the newspaper.")
+           :description "clean paragraph"
+           :expected ((prose . 0) (academic . 0)))
+    (:text ,(concat "Their going to the park later today, "
+                    "irregardless of the rain.  Each of "
+                    "the students need to submit there "
+                    "homework by Friday.")
+           :description ,(concat "paragraph with homophones, "
+                                 "nonstandard word, and "
+                                 "subject-verb disagreement")
+           :expected ((prose . 4) (academic . 4))))
   "Test inputs: each entry is a plist with :text, :description, :expected.
 :expected is an alist mapping each prompt style symbol to its
 expected suggestion count, e.g., ((prose . 0) (academic . 2)).

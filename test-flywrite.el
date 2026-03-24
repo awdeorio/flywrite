@@ -109,39 +109,55 @@
 ;;;; ---- Unit boundary detection ----
 
 
-(ert-deftest flywrite-test-sentence-bounds ()
-  "Sentence boundaries are detected correctly."
-  (let ((flywrite-granularity 'sentence))
-    (with-temp-buffer
-      (insert "First sentence.  Second sentence.  Third sentence.")
-      (let ((bounds (flywrite--unit-bounds-at-pos 1)))
-        (should (= (car bounds) 1))
-        (should (string= (buffer-substring-no-properties
-                          (car bounds) (cdr bounds))
-                         "First sentence."))))))
-
-
 (ert-deftest flywrite-test-paragraph-bounds ()
   "Paragraph boundaries are detected correctly."
-  (let ((flywrite-granularity 'paragraph))
-    (with-temp-buffer
-      (insert (concat "First paragraph line one.\n"
-                      "First paragraph line two.\n"
-                      "\nSecond paragraph."))
-      (let ((bounds (flywrite--unit-bounds-at-pos 1)))
-        (should (= (car bounds) 1))
-        (should (string-match-p "First paragraph line one"
-                                (buffer-substring-no-properties
-                                 (car bounds) (cdr bounds))))))))
+  (with-temp-buffer
+    (insert (concat "First paragraph line one.\n"
+                    "First paragraph line two.\n"
+                    "\nSecond paragraph.\n"
+                    "\nThird paragraph."))
+    ;; First paragraph
+    (let* ((bounds (flywrite--unit-bounds-at-pos 1))
+           (text (buffer-substring-no-properties
+                  (car bounds) (cdr bounds))))
+      (should (= (car bounds) 1))
+      (should (string-match-p "First paragraph line one" text))
+      (should-not (string-match-p "Second" text)))
+    ;; Second paragraph
+    (let* ((bounds (flywrite--unit-bounds-at-pos 55))
+           (text (buffer-substring-no-properties
+                  (car bounds) (cdr bounds))))
+      (should (string= text "Second paragraph."))
+      (should-not (string-match-p "First" text)))
+    ;; Third paragraph
+    (let* ((bounds (flywrite--unit-bounds-at-pos (- (point-max) 1)))
+           (text (buffer-substring-no-properties
+                  (car bounds) (cdr bounds))))
+      (should (string= text "Third paragraph.")))))
+
+
+(ert-deftest flywrite-test-paragraph-bounds-abbreviations ()
+  "Abbreviations (Dr., et. al., etc.) stay within one paragraph."
+  (with-temp-buffer
+    (insert (concat "This Emacs mode was developed in"
+                    " collaboration with Claude Code"
+                    " March 2026 by Dr. Andrew DeOrio."
+                    "  The regression test includes"
+                    " unit tests, linting, et. al."
+                    "  Claude Code needed guidance with"
+                    " code style, nesting depth, etc.,"
+                    " as well as testing."))
+    (let ((units (flywrite--collect-units-in-region
+                  1 (point-max))))
+      (should (= (length units) 1)))))
 
 
 (ert-deftest flywrite-test-unit-bounds-nonempty ()
   "Unit bounds end >= beg (never negative-length)."
-  (let ((flywrite-granularity 'sentence))
-    (with-temp-buffer
-      (insert "A.")
-      (let ((bounds (flywrite--unit-bounds-at-pos 1)))
-        (should (>= (cdr bounds) (car bounds)))))))
+  (with-temp-buffer
+    (insert "A.")
+    (let ((bounds (flywrite--unit-bounds-at-pos 1)))
+      (should (>= (cdr bounds) (car bounds))))))
 
 ;;;; ---- Mode-aware suppression ----
 
@@ -218,21 +234,21 @@
 
 (ert-deftest flywrite-test-collect-units-basic ()
   "Collecting units finds unchecked units in a region."
-  (let ((flywrite-granularity 'sentence)
-        (flywrite-api-url "http://localhost:0/v1/chat/completions"))
+  (let ((flywrite-api-url "http://localhost:0/v1/chat/completions"))
     (with-temp-buffer
       (text-mode)
       (flywrite-mode 1)
-      (insert "First sentence.  Second sentence.  Third sentence.")
+      (insert (concat "First paragraph.\n\n"
+                      "Second paragraph.\n\n"
+                      "Third paragraph."))
       (let ((units (flywrite--collect-units-in-region 1 (point-max))))
-        (should (>= (length units) 2)))
+        (should (= (length units) 3)))
       (flywrite-mode -1))))
 
 
 (ert-deftest flywrite-test-collect-units-skips-checked ()
   "Already-checked units are not collected."
-  (let ((flywrite-granularity 'sentence)
-        (flywrite-api-url "http://localhost:0/v1/chat/completions"))
+  (let ((flywrite-api-url "http://localhost:0/v1/chat/completions"))
     (with-temp-buffer
       (text-mode)
       (flywrite-mode 1)
@@ -261,107 +277,53 @@
       (should-not flywrite--idle-timer))))
 
 
-;;;; ---- Sentence boundaries with test file content (example.txt) ----
-
-
-(ert-deftest flywrite-test-sentence-bounds-plain-text ()
-  "Sentence detection in multi-sentence plain text (like example.txt)."
-  (let ((flywrite-granularity 'sentence))
-    (with-temp-buffer
-      (insert (concat "The quick brown fox jumpted over"
-                      " the lazy dog. "
-                      "Him and his friend went to the"
-                      " store to buy some grocerys. "
-                      "The weather was very extremely"
-                      " hot outside yesterday."))
-      ;; First sentence
-      (let ((bounds (flywrite--unit-bounds-at-pos 1)))
-        (should
-         (string= (buffer-substring-no-properties
-                   (car bounds) (cdr bounds))
-                  "The quick brown fox jumpted over the lazy dog.")))
-      ;; Second sentence (start from middle of it)
-      (let ((bounds (flywrite--unit-bounds-at-pos 50)))
-        (should (string-match-p
-                 "Him and his friend"
-                 (buffer-substring-no-properties
-                  (car bounds) (cdr bounds)))))
-      ;; Third sentence (start from near end)
-      (let ((bounds (flywrite--unit-bounds-at-pos 110)))
-        (should (string-match-p
-                 "The weather was"
-                 (buffer-substring-no-properties
-                  (car bounds) (cdr bounds))))))))
-
-
-(ert-deftest flywrite-test-collect-units-plain-text ()
-  "Collect all sentences from multi-sentence plain text (example.txt)."
-  (let ((flywrite-granularity 'sentence)
-        (flywrite-api-url "http://localhost:0/v1/chat/completions"))
-    (with-temp-buffer
-      (text-mode)
-      (flywrite-mode 1)
-      (insert (concat "The quick brown fox jumpted over"
-                      " the lazy dog. "
-                      "Him and his friend went to the"
-                      " store to buy some grocerys. "
-                      "The weather was very extremely"
-                      " hot outside yesterday."))
-      (let ((units (flywrite--collect-units-in-region
-                    1 (point-max))))
-        (should (= (length units) 3)))
-      (flywrite-mode -1))))
-
-
 ;;;; ---- Paragraph boundaries (markdown-simple.md) ----
 
 
 (ert-deftest flywrite-test-paragraph-bounds-multi ()
   "Paragraph detection in multi-paragraph text (like markdown-simple.md)."
-  (let ((flywrite-granularity 'paragraph))
-    (with-temp-buffer
-      (insert (concat "The quick brown fox jumpted over"
-                      " the lazy dog. "
-                      "Him and his friend went to"
-                      " the store."
-                      "\n\n"
-                      "Their going to the park later"
-                      " today, irregardless of the"
-                      " rain. Each of the students"
-                      " need to submit there homework."
-                      "\n\n"
-                      "The morning light filtered"
-                      " through the curtains and cast"
-                      " long shadows across the"
-                      " floor."))
-      ;; First paragraph
-      (let ((bounds (flywrite--unit-bounds-at-pos 1)))
-        (should (string-match-p
-                 "quick brown fox"
-                 (buffer-substring-no-properties
-                  (car bounds) (cdr bounds))))
-        (should (string-match-p
-                 "grocerys\\|store"
-                 (buffer-substring-no-properties
-                  (car bounds) (cdr bounds)))))
-      ;; Second paragraph
-      (let* ((para2-start
-              (+ 1 (string-match
-                    "\n\nTheir"
-                    (buffer-substring-no-properties
-                     1 (point-max)))))
-             (bounds (flywrite--unit-bounds-at-pos
-                      (+ 3 para2-start))))
-        (should (string-match-p
-                 "Their going"
-                 (buffer-substring-no-properties
-                  (car bounds) (cdr bounds))))))))
+  (with-temp-buffer
+    (insert (concat "The quick brown fox jumpted over"
+                    " the lazy dog. "
+                    "Him and his friend went to"
+                    " the store."
+                    "\n\n"
+                    "Their going to the park later"
+                    " today, irregardless of the"
+                    " rain. Each of the students"
+                    " need to submit there homework."
+                    "\n\n"
+                    "The morning light filtered"
+                    " through the curtains and cast"
+                    " long shadows across the"
+                    " floor."))
+    ;; First paragraph
+    (let ((bounds (flywrite--unit-bounds-at-pos 1)))
+      (should (string-match-p
+               "quick brown fox"
+               (buffer-substring-no-properties
+                (car bounds) (cdr bounds))))
+      (should (string-match-p
+               "grocerys\\|store"
+               (buffer-substring-no-properties
+                (car bounds) (cdr bounds)))))
+    ;; Second paragraph
+    (let* ((para2-start
+            (+ 1 (string-match
+                  "\n\nTheir"
+                  (buffer-substring-no-properties
+                   1 (point-max)))))
+           (bounds (flywrite--unit-bounds-at-pos
+                    (+ 3 para2-start))))
+      (should (string-match-p
+               "Their going"
+               (buffer-substring-no-properties
+                (car bounds) (cdr bounds)))))))
 
 
 (ert-deftest flywrite-test-collect-units-paragraphs ()
   "Collect paragraph units from multi-paragraph content."
-  (let ((flywrite-granularity 'paragraph)
-        (flywrite-api-url "http://localhost:0/v1/chat/completions"))
+  (let ((flywrite-api-url "http://localhost:0/v1/chat/completions"))
     (with-temp-buffer
       (text-mode)
       (flywrite-mode 1)
@@ -378,40 +340,25 @@
 ;;;; ---- LaTeX content (latex-simple.tex, latex-itemize.tex) ----
 
 
-(ert-deftest flywrite-test-sentence-bounds-latex ()
-  "Sentence detection works inside LaTeX document body (latex-simple.tex)."
-  (let ((flywrite-granularity 'sentence))
-    (with-temp-buffer
-      (insert (concat "\\begin{document}\n\n"
-                      "The quick brown fox jumpted"
-                      " over the lazy dog. "
-                      "Him and his friend went"
-                      " to the store."
-                      "\n\n\\end{document}"))
-      ;; Find a sentence inside the document body
-      (let ((bounds (flywrite--unit-bounds-at-pos 20)))
-        (should (string-match-p
-                 "quick brown fox"
-                 (buffer-substring-no-properties
-                  (car bounds) (cdr bounds))))))))
-
-
-(ert-deftest flywrite-test-collect-units-latex-prose ()
-  "Collect units from LaTeX prose, ignoring preamble-like lines."
-  (let ((flywrite-granularity 'sentence)
-        (flywrite-api-url "http://localhost:0/v1/chat/completions"))
-    (with-temp-buffer
-      (text-mode)
-      (flywrite-mode 1)
-      (insert (concat "The quick brown fox jumpted"
-                      " over the lazy dog. "
-                      "Him and his friend went to"
-                      " the store to buy some"
-                      " grocerys."))
-      (let ((units (flywrite--collect-units-in-region
-                    1 (point-max))))
-        (should (= (length units) 2)))
-      (flywrite-mode -1))))
+(ert-deftest flywrite-test-paragraph-bounds-latex ()
+  "Paragraph detection works inside LaTeX document body."
+  (with-temp-buffer
+    (insert (concat "\\begin{document}\n\n"
+                    "The quick brown fox jumpted"
+                    " over the lazy dog. "
+                    "Him and his friend went"
+                    " to the store."
+                    "\n\n\\end{document}"))
+    ;; Find the paragraph inside the document body
+    (let ((bounds (flywrite--unit-bounds-at-pos 20)))
+      (should (string-match-p
+               "quick brown fox"
+               (buffer-substring-no-properties
+                (car bounds) (cdr bounds))))
+      (should (string-match-p
+               "the store\\."
+               (buffer-substring-no-properties
+                (car bounds) (cdr bounds)))))))
 
 
 ;;;; ---- Content hashing with different formats ----
@@ -529,8 +476,7 @@
 
 (ert-deftest flywrite-test-collect-units-no-duplicates ()
   "Collecting units does not produce duplicate entries for the same position."
-  (let ((flywrite-granularity 'sentence)
-        (flywrite-api-url "http://localhost:0/v1/chat/completions"))
+  (let ((flywrite-api-url "http://localhost:0/v1/chat/completions"))
     (with-temp-buffer
       (text-mode)
       (flywrite-mode 1)
@@ -544,13 +490,40 @@
 
 (ert-deftest flywrite-test-collect-units-empty-buffer ()
   "Collecting units in an empty buffer returns nil."
-  (let ((flywrite-granularity 'sentence)
-        (flywrite-api-url "http://localhost:0/v1/chat/completions"))
+  (let ((flywrite-api-url "http://localhost:0/v1/chat/completions"))
     (with-temp-buffer
       (text-mode)
       (flywrite-mode 1)
       (let ((units (flywrite--collect-units-in-region 1 (point-max))))
         (should (= (length units) 0)))
+      (flywrite-mode -1))))
+
+
+;;;; ---- Check buffer ----
+
+
+(ert-deftest flywrite-test-check-buffer-enqueues-paragraphs ()
+  "check-buffer enqueues each paragraph as a separate dirty entry."
+  (let ((flywrite-api-url "http://localhost:0/v1/chat/completions")
+        (flywrite-check-confirm-threshold 100))
+    (with-temp-buffer
+      (text-mode)
+      (flywrite-mode 1)
+      (insert (concat "First paragraph here.\n\n"
+                      "Second paragraph here.\n\n"
+                      "Third paragraph here."))
+      (setq flywrite--dirty-registry nil)
+      (flywrite-check-buffer)
+      ;; Should enqueue 3 separate entries, one per paragraph
+      (should (= (length flywrite--dirty-registry) 3))
+      ;; Each entry should cover only its own paragraph
+      (let ((texts (mapcar (lambda (entry)
+                             (buffer-substring-no-properties
+                              (nth 0 entry) (nth 1 entry)))
+                           flywrite--dirty-registry)))
+        (should (member "First paragraph here." texts))
+        (should (member "Second paragraph here." texts))
+        (should (member "Third paragraph here." texts)))
       (flywrite-mode -1))))
 
 
@@ -973,7 +946,6 @@
   "End-to-end: insert error, check, fix, re-check, verify."
   (let* ((flywrite-api-url "https://api.openai.com/v1/chat/completions")
          (flywrite-api-key "sk-fake-test-key")
-         (flywrite-granularity 'sentence)
          (flywrite-idle-delay 0.1)
          (flywrite-eager nil)
          ;; Track calls to url-retrieve

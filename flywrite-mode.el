@@ -120,13 +120,6 @@ When nil, the model is auto-detected from `flywrite-api-url'."
   :group 'flywrite)
 
 
-(defcustom flywrite-granularity 'sentence
-  "Unit of text to check: `sentence' or `paragraph'."
-  :type '(choice (const :tag "Sentence" sentence)
-                 (const :tag "Paragraph" paragraph))
-  :group 'flywrite)
-
-
 (defcustom flywrite-check-confirm-threshold 50
   "Max API calls before `flywrite-check-buffer' prompts for confirmation."
   :type 'integer
@@ -365,32 +358,18 @@ FORMAT-STRING and ARGS are passed to `format'."
 
 
 (defun flywrite--unit-bounds-at-pos (pos)
-  "Return (beg . end) of the unit containing POS.
-Respects `flywrite-granularity'."
+  "Return (beg . end) of the paragraph containing POS."
   (save-excursion
     (goto-char pos)
-    (if (eq flywrite-granularity 'paragraph)
-        (let (beg end)
-          (backward-paragraph)
-          (skip-chars-forward " \t\n")
-          (setq beg (point))
-          (forward-paragraph)
-          (skip-chars-backward " \t\n")
-          (setq end (point))
-          (when (< end beg) (setq end beg))
-          (cons beg end))
-
-      ;; sentence granularity — treat single space as sentence boundary
-      ;; regardless of the user's `sentence-end-double-space' setting
-      (let ((sentence-end-double-space nil)
-            beg end)
-        (backward-sentence)
-        (skip-chars-forward " \t\n")
-        (setq beg (point))
-        (forward-sentence)
-        (setq end (point))
-        (when (< end beg) (setq end beg))
-        (cons beg end)))))
+    (let (beg end)
+      (backward-paragraph)
+      (skip-chars-forward " \t\n")
+      (setq beg (point))
+      (forward-paragraph)
+      (skip-chars-backward " \t\n")
+      (setq end (point))
+      (when (< end beg) (setq end beg))
+      (cons beg end))))
 
 
 ;;;; ---- Hashing ----
@@ -1183,8 +1162,7 @@ Prompts for confirmation when the count exceeds
 
 
 (defun flywrite-check-at-point ()
-  "Queue the unit at point for checking.
-Respects `flywrite-granularity'."
+  "Queue the paragraph at point for checking."
   (interactive)
   (unless flywrite-mode
     (flywrite--log "check-at-point: mode not enabled")
@@ -1293,12 +1271,12 @@ Eglot replaces the buffer-local value with only its own backend."
 
   (flywrite--log (concat "flywrite-mode enabled in %s"
                          " (emacs %s, url=%s, model=%s,"
-                         " granularity=%s, idle=%.1f,"
+                         " idle=%.1f,"
                          " max-concurrent=%d, eager=%s,"
                          " caching=%s, prompt=%s)")
                  (buffer-name) emacs-version
                  (or flywrite-api-url "nil")
-                 (or flywrite-api-model "auto") flywrite-granularity
+                 (or flywrite-api-model "auto")
                  flywrite-idle-delay flywrite-max-concurrent
                  flywrite-eager flywrite-enable-caching
                  (if (symbolp flywrite-system-prompt)

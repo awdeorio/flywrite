@@ -74,7 +74,7 @@ flymake-popon / echo area  →  inline popups near flagged text
 ```
 
 Key design decisions:
-- **Unit granularity**: a "unit" is the text sent per API call — one sentence or one paragraph, controlled by `flywrite-granularity` (sentence by default)
+- **Unit granularity**: a "unit" is one paragraph of text sent per API call
 - **Content deduplication**: MD5 hashing prevents redundant API calls; checked hashes stored in `flywrite--checked-units` hash table
 - **Stale response guard**: responses discarded if unit changed while call was in-flight, then re-dirtied for re-check
 - **Flymake backend**: `flywrite-flymake` registered in `flymake-diagnostic-functions`; handles eglot coexistence by re-adding itself via `eglot-managed-mode-hook`

@@ -116,7 +116,6 @@ Rules:
 Writing feedback settings:
 ```elisp
 (setq flywrite-system-prompt 'academic) ; 'prose, 'academic, or custom string
-(setq flywrite-granularity 'sentence)   ; 'sentence or 'paragraph, sent to LLM
 ```
 
 Performance settings:
@@ -264,7 +263,7 @@ As you move or type, flywrite will automatically run checks after a short idle d
 | `flymake-goto-next-error`  | Next diagnostic (flymake built-in) |
 | `flymake-goto-prev-error`  | Previous diagnostic (flymake built-in) |
 
-A `unit` refers to a sentence or paragraph which is [configurable](#configuration).
+A `unit` refers to a paragraph of text.
 
 ## Troubleshooting
 

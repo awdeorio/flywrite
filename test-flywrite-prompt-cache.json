@@ -269,6 +269,26 @@
       "timestamp": "2026-03-24T13:27:15Z"
     },
     {
+      "text": "The morning light filtered through the curtains and cast long shadows across the floor.  She picked up her coffee, took a quiet sip, and turned to the first page of the newspaper.",
+      "prompt_hash": "97912e902624ba8e5322b793c77c53fe",
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0,
+      "response": {
+        "suggestions": []
+      },
+      "timestamp": "2026-03-24T14:49:31Z"
+    },
+    {
+      "text": "The morning light filtered through the curtains and cast long shadows across the floor.  She picked up her coffee, took a quiet sip, and turned to the first page of the newspaper.",
+      "prompt_hash": "cce0103dd3d166265a3d24508471fb99",
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0,
+      "response": {
+        "suggestions": []
+      },
+      "timestamp": "2026-03-24T14:49:24Z"
+    },
+    {
       "text": "The optimization had a significant affect on runtime performance.",
       "prompt_hash": "97912e902624ba8e5322b793c77c53fe",
       "model": "claude-sonnet-4-20250514",
@@ -321,6 +341,52 @@
         "suggestions": []
       },
       "timestamp": "2026-03-24T13:27:12Z"
+    },
+    {
+      "text": "The quick brown fox jumped over the lazy dog.  Him and his friend went to the store to buy some grocerys.  The weather was very extremely hot outside yesterday.",
+      "prompt_hash": "97912e902624ba8e5322b793c77c53fe",
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0,
+      "response": {
+        "suggestions": [
+          {
+            "quote": "Him and his friend",
+            "reason": "Should be 'He and his friend' - subject pronoun needed"
+          },
+          {
+            "quote": "grocerys",
+            "reason": "Misspelled - should be 'groceries'"
+          },
+          {
+            "quote": "very extremely",
+            "reason": "Redundant intensifiers - use either 'very' or 'extremely'"
+          }
+        ]
+      },
+      "timestamp": "2026-03-24T14:49:30Z"
+    },
+    {
+      "text": "The quick brown fox jumped over the lazy dog.  Him and his friend went to the store to buy some grocerys.  The weather was very extremely hot outside yesterday.",
+      "prompt_hash": "cce0103dd3d166265a3d24508471fb99",
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0,
+      "response": {
+        "suggestions": [
+          {
+            "quote": "Him and his friend",
+            "reason": "Should be 'He and his friend' - subject pronoun needed"
+          },
+          {
+            "quote": "grocerys",
+            "reason": "Misspelled - should be 'groceries'"
+          },
+          {
+            "quote": "very extremely",
+            "reason": "Redundant intensifiers - use either 'very' or 'extremely'"
+          }
+        ]
+      },
+      "timestamp": "2026-03-24T14:49:23Z"
     },
     {
       "text": "The results don't support the hypothesis, and it's really not a big deal.",
@@ -481,6 +547,60 @@
         ]
       },
       "timestamp": "2026-03-24T13:27:29Z"
+    },
+    {
+      "text": "Their going to the park later today, irregardless of the rain.  Each of the students need to submit there homework by Friday.",
+      "prompt_hash": "97912e902624ba8e5322b793c77c53fe",
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0,
+      "response": {
+        "suggestions": [
+          {
+            "quote": "Their going",
+            "reason": "Should be 'They're' (they are) not possessive 'Their'"
+          },
+          {
+            "quote": "irregardless",
+            "reason": "Non-standard word; use 'regardless'"
+          },
+          {
+            "quote": "Each of the students need",
+            "reason": "Subject-verb disagreement; 'Each' is singular, use 'needs'"
+          },
+          {
+            "quote": "there homework",
+            "reason": "Should be 'their' (possessive) not 'there' (location)"
+          }
+        ]
+      },
+      "timestamp": "2026-03-24T14:49:36Z"
+    },
+    {
+      "text": "Their going to the park later today, irregardless of the rain.  Each of the students need to submit there homework by Friday.",
+      "prompt_hash": "cce0103dd3d166265a3d24508471fb99",
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0,
+      "response": {
+        "suggestions": [
+          {
+            "quote": "Their going",
+            "reason": "Should be 'They're' (they are)"
+          },
+          {
+            "quote": "irregardless",
+            "reason": "Should be 'regardless'"
+          },
+          {
+            "quote": "Each of the students need",
+            "reason": "Subject-verb disagreement: 'Each...needs'"
+          },
+          {
+            "quote": "there homework",
+            "reason": "Should be 'their' (possessive)"
+          }
+        ]
+      },
+      "timestamp": "2026-03-24T14:49:27Z"
     },
     {
       "text": "We feel the results are promising.",
