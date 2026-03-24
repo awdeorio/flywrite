@@ -266,8 +266,11 @@ Rules:
 - Focus on objective errors: misspellings, wrong words
   (e.g., affect/effect, there/their), subject-verb disagreement,
   pronoun case, missing or wrong punctuation, and redundant words.
-- Do not flag sentence length, structure preferences, or subjective
-  style choices.
+- Do not flag style preferences or debatable grammar rules
+  (e.g., comma before 'which', comma after introductory phrase,
+  'like' vs 'such as', split infinitives, ending sentences
+  with prepositions).  When a comma is optional, do not flag it.
+- Err on the side of not flagging.  Only flag clear, unambiguous errors.
 - Only evaluate prose content.  Ignore markup like LaTeX, HTML, or Org-mode.")
 
 
