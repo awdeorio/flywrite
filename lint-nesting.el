@@ -39,38 +39,55 @@
             (setq max-d sub-d))))
       max-d))))
 
+(defun lint-nesting--read-forms ()
+  "Read all top-level forms from current buffer.
+Return list of (START . FORM) pairs."
+  (goto-char (point-min))
+  (let ((forms nil))
+    (condition-case nil
+        (while t
+          (let ((start (point)))
+            (push (cons start (read (current-buffer))) forms)))
+      (end-of-file nil))
+    (nreverse forms)))
+
+(defun lint-nesting--check-form (form start)
+  "Return a violation string if FORM at START exceeds max depth."
+  (when (and (listp form)
+             (memq (car form)
+                   '(defun defmacro cl-defun defsubst)))
+    (let* ((name (nth 1 form))
+           (max-d (lint-nesting--walk form 0)))
+      (when (> max-d lint-nesting-max-depth)
+        (save-excursion
+          (goto-char start)
+          (format "%s:%d: %s has control-flow depth %d (max %d)"
+                  lint-nesting-file
+                  (line-number-at-pos)
+                  name max-d lint-nesting-max-depth))))))
+
 (defun lint-nesting-check ()
-  "Check `lint-nesting-file' and print violations."
+  "Check `lint-nesting-file' and return list of violation strings."
   (with-temp-buffer
     (insert-file-contents lint-nesting-file)
-    (goto-char (point-min))
     (let ((violations nil))
-      (condition-case nil
-          (while t
-            (let* ((start (point))
-                   (form (read (current-buffer))))
-              (when (and (listp form)
-                         (memq (car form) '(defun defmacro cl-defun defsubst)))
-                (let* ((name (nth 1 form))
-                       (max-d (lint-nesting--walk form 0)))
-                  (when (> max-d lint-nesting-max-depth)
-                    (save-excursion
-                      (goto-char start)
-                      (push (format
-                             "%s:%d: %s has control-flow depth %d (max %d)"
-                             lint-nesting-file
-                             (line-number-at-pos)
-                             name max-d lint-nesting-max-depth)
-                            violations)))))))
-        (end-of-file nil))
-      (dolist (v (nreverse violations))
-        (princ (concat v "\n"))))))
+      (dolist (pair (lint-nesting--read-forms))
+        (let ((v (lint-nesting--check-form
+                  (cdr pair) (car pair))))
+          (when v (push v violations))))
+      (nreverse violations))))
 
-;; Parse command-line argument
-(setq lint-nesting-file (car command-line-args-left))
-(setq command-line-args-left (cdr command-line-args-left))
-(unless lint-nesting-file
-  (error "Usage: emacs -Q --batch -l lint-nesting.el FILE"))
-(lint-nesting-check)
+;; Parse command-line arguments and check each file
+(unless command-line-args-left
+  (error "Usage: emacs -Q --batch -l lint-nesting.el FILE..."))
+(let ((had-violations nil))
+  (dolist (file command-line-args-left)
+    (setq lint-nesting-file file)
+    (dolist (v (lint-nesting-check))
+      (message "%s" v)
+      (setq had-violations t)))
+  (setq command-line-args-left nil)
+  (when had-violations
+    (kill-emacs 1)))
 
 ;;; lint-nesting.el ends here

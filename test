@@ -26,30 +26,24 @@ emacs \
   "${EL_FILES[@]}"
 rm -f *.elc
 
-# Run a command and fail if it produces any output on stdout.
-check_quiet() {
-  output=$("$@" 2>/dev/null)
-  if [ -n "$output" ]; then
-    echo "$output"
-    exit 1
-  fi
-}
-
 # Lint: elint
 ELINT_INIT='(progn
+  (setq inhibit-message t)
   (require (quote elint))
   (push default-directory load-path)
   (dolist (f command-line-args-left)
     (elint-file f))
+  (setq command-line-args-left nil)
   (with-current-buffer "*Elint*"
-    (princ (buffer-string)))
-  (setq command-line-args-left nil))'
+    (let ((output (buffer-string)))
+      (unless (string-empty-p output)
+        (princ output)
+        (kill-emacs 1)))))'
 echo "Lint: elint"
-check_quiet \
-  emacs \
-    -Q --batch \
-    --eval "$ELINT_INIT" \
-    "${EL_FILES[@]}"
+emacs \
+  -Q --batch \
+  --eval "$ELINT_INIT" \
+  "${EL_FILES[@]}"
 
 # Lint: elisp-lint
 # Install from MELPA, disable checks run separately, includes checkdoc
@@ -101,11 +95,10 @@ rm -f flywrite-autoloads.el flywrite-autoloads.elc
 
 # Lint: nesting depth (control-flow forms only, max depth 6)
 echo "Lint: nesting depth"
-check_quiet \
-  emacs \
-    -Q --batch \
-    -l lint-nesting.el \
-    "${EL_FILES[@]}"
+emacs \
+  -Q --batch \
+  -l lint-nesting.el \
+  "${EL_FILES[@]}"
 
 # Unit tests (filter expected flywrite log messages from stderr)
 echo "Unit tests"
