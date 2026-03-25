@@ -4,7 +4,7 @@
 
 ;; Author: Andrew DeOrio <awdeorio@umich.edu>
 ;; Maintainer: Andrew DeOrio <awdeorio@umich.edu>
-;; Version: 0.2.0
+;; Version: 0.3.0
 ;; Package-Requires: ((emacs "29.1"))
 ;; Keywords: text, wp
 ;; URL: https://github.com/awdeorio/flywrite
