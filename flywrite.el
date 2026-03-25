@@ -562,58 +562,63 @@ auto-detect from `flywrite-api-url'."
        (t flywrite--default-model-openai))))
 
 
+(defun flywrite--build-payload (text model prompt anthropic-p)
+  "Build a JSON-encoded API payload string.
+TEXT is the user content.  MODEL is the model name.  PROMPT is
+the system prompt.  ANTHROPIC-P selects the payload format."
+
+  ;; Anthropic caching wraps the prompt in a content block with
+  ;; cache_control; without caching, use the plain prompt string.
+  (let ((system-msg (if (and anthropic-p flywrite-enable-caching)
+                        `[((type . "text")
+                           (text . ,prompt)
+                           (cache_control . ((type . "ephemeral"))))]
+                      prompt)))
+
+    ;; Anthropic: system prompt is a top-level "system" field.
+    ;; OpenAI-compatible: system prompt is a message with role "system".
+    (json-encode
+     (if anthropic-p
+         `((model . ,model)
+           (max_tokens . 4096)
+           (temperature . ,flywrite-api-temperature)
+           (system . ,system-msg)
+           (messages . [((role . "user")
+                         (content . ,text))]))
+       `((model . ,model)
+         (max_tokens . 4096)
+         (temperature . ,flywrite-api-temperature)
+         (messages . [((role . "system")
+                       (content . ,prompt))
+                      ((role . "user")
+                       (content . ,text))]))))))
+
+(defun flywrite--build-auth-headers (anthropic-p api-key)
+  "Build HTTP headers for an API request.
+ANTHROPIC-P selects the authentication scheme.  API-KEY may be
+nil for local providers."
+  ;; Anthropic: "x-api-key" + "anthropic-version"
+  ;; Others:    "Authorization: Bearer ..."
+  (append `(("Content-Type" . "application/json")
+            ,@(cond
+               (anthropic-p
+                `(("x-api-key" . ,api-key)
+                  ("anthropic-version" . "2023-06-01")))
+               (api-key
+                `(("Authorization"
+                   . ,(concat "Bearer " api-key))))))
+          flywrite-api-headers))
+
 (defun flywrite--build-request (text api-key)
   "Build an API request for TEXT, returning (PAYLOAD . HEADERS).
 PAYLOAD is a JSON-encoded string.  HEADERS is an alist suitable
 for `url-request-extra-headers'.  API-KEY may be nil for local
 providers."
-  (let* ((anthropic-p (flywrite--anthropic-api-p))
-         (model (flywrite--effective-model))
-         (prompt (flywrite--get-system-prompt))
-         ;; Anthropic caching wraps the prompt in a content block:
-         ;;   "system": [{"type":"text", "text":"...",
-         ;;               "cache_control":{"type":"ephemeral"}}]
-         ;; Without caching, use the plain prompt string.
-         (system-msg (if (and anthropic-p flywrite-enable-caching)
-                         `[((type . "text")
-                            (text . ,prompt)
-                            (cache_control . ((type . "ephemeral"))))]
-                       prompt))
-
-         ;; Anthropic: system prompt is a top-level "system" field.
-         ;;   {"model":"...", "system":"...", "messages":[{"role":"user",...}]}
-         ;;
-         ;; OpenAI-compatible: system prompt is a message with role "system".
-         ;;   {"model":"...", "messages":[{"role":"system",...},
-         ;;    {"role":"user",...}]}
-         (payload (json-encode
-                   (if anthropic-p
-                       `((model . ,model)
-                         (max_tokens . 4096)
-                         (temperature . ,flywrite-api-temperature)
-                         (system . ,system-msg)
-                         (messages . [((role . "user")
-                                       (content . ,text))]))
-                     `((model . ,model)
-                       (max_tokens . 4096)
-                       (temperature . ,flywrite-api-temperature)
-                       (messages . [((role . "system")
-                                     (content . ,prompt))
-                                    ((role . "user")
-                                     (content . ,text))])))))
-
-         ;; Anthropic: "x-api-key: sk-..." + "anthropic-version: 2023-06-01"
-         ;; Others:    "Authorization: Bearer sk-..."
-         (headers
-          (append `(("Content-Type" . "application/json")
-                    ,@(cond
-                       (anthropic-p
-                        `(("x-api-key" . ,api-key)
-                          ("anthropic-version" . "2023-06-01")))
-                       (api-key
-                        `(("Authorization" . ,(concat "Bearer " api-key))))))
-                  flywrite-api-headers)))
-    (cons payload headers)))
+  (let ((anthropic-p (flywrite--anthropic-api-p))
+        (model (flywrite--effective-model))
+        (prompt (flywrite--get-system-prompt)))
+    (cons (flywrite--build-payload text model prompt anthropic-p)
+          (flywrite--build-auth-headers anthropic-p api-key))))
 
 
 (defun flywrite--validate-config ()
@@ -1368,6 +1373,16 @@ Eglot replaces the buffer-local value with only its own backend."
                  flywrite-eager flywrite-enable-caching))
 
 
+(defun flywrite--kill-connection-buffers ()
+  "Kill in-flight HTTP buffers so network processes don't linger."
+  (dolist (conn-buf flywrite--connection-buffers)
+    (when (buffer-live-p conn-buf)
+      (let ((proc (get-buffer-process conn-buf)))
+        (when proc
+          (delete-process proc)))
+      (kill-buffer conn-buf)))
+  (setq flywrite--connection-buffers nil))
+
 (defun flywrite--disable ()
   "Tear down `flywrite-mode' in the current buffer."
   (flywrite--log (concat "flywrite-mode disabled in %s"
@@ -1382,14 +1397,7 @@ Eglot replaces the buffer-local value with only its own backend."
     (cancel-timer flywrite--idle-timer)
     (setq flywrite--idle-timer nil))
 
-  ;; Kill in-flight HTTP buffers so network processes don't linger
-  (dolist (conn-buf flywrite--connection-buffers)
-    (when (buffer-live-p conn-buf)
-      (let ((proc (get-buffer-process conn-buf)))
-        (when proc
-          (delete-process proc)))
-      (kill-buffer conn-buf)))
-  (setq flywrite--connection-buffers nil)
+  (flywrite--kill-connection-buffers)
 
   ;; Unhook from after-change and eglot
   (remove-hook 'after-change-functions #'flywrite--after-change t)
