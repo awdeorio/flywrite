@@ -218,6 +218,10 @@ without needing to edit."
 Used by `after-change' to find and remove stale checked-paragraph entries.")
 
 
+(defvar-local flywrite--validated nil
+  "Non-nil after `flywrite--validate-config' has run in this buffer.")
+
+
 (defvar flywrite--response-handled nil
   "Non-nil when a `url-retrieve' callback has already been processed.
 Set buffer-locally in HTTP response buffers to guard against
@@ -647,8 +651,12 @@ Signal an error if configuration is invalid, preventing mode activation."
         ;; Model resolves without error
         (flywrite--log "API model: %s" (flywrite--effective-model))
 
-        ;; System prompt resolves without error
-        (flywrite--get-system-prompt)
+        ;; System prompt resolves without error; log it
+        (let ((prompt (flywrite--get-system-prompt)))
+          (flywrite--log "prompt=%s"
+                         (if (symbolp flywrite-system-prompt)
+                             flywrite-system-prompt "custom"))
+          (flywrite--log "System prompt:\n%s" prompt))
         (flywrite--log "Config valid"))
     (error
      (flywrite--log "Config validation failed: %s" (error-message-string err))
@@ -658,6 +666,14 @@ Signal an error if configuration is invalid, preventing mode activation."
 (cl-defun flywrite--send-request (buf beg end hash)
   "Send an API request for the text in BUF between BEG and END.
 HASH is the content hash at time of dispatch for stale checking."
+
+  ;; Validate config on first API call (deferred from enable so that
+  ;; file-local variables are in effect).
+  (unless (buffer-local-value 'flywrite--validated buf)
+    (with-current-buffer buf
+      (setq flywrite--validated t)
+      (flywrite--validate-config)))
+
   ;; Skip if already checked (catches duplicates from queue)
   (when (with-current-buffer buf
           (gethash hash flywrite--checked-paragraphs))
@@ -1307,9 +1323,6 @@ Eglot replaces the buffer-local value with only its own backend."
 
 (defun flywrite--enable ()
   "Set up `flywrite-mode' in the current buffer."
-  ;; Validate config before any setup — signals error on bad config
-  (flywrite--validate-config)
-
   ;; Initialize buffer-local state
   (setq flywrite--dirty-registry nil)
   (setq flywrite--checked-paragraphs (make-hash-table :test 'equal))
@@ -1319,6 +1332,7 @@ Eglot replaces the buffer-local value with only its own backend."
   (setq flywrite--connection-buffers nil)
   (setq flywrite--diagnostics nil)
   (setq flywrite--report-fn nil)
+  (setq flywrite--validated nil)
 
   ;; Enable flymake and register our diagnostic backend.
   ;; Do this before adding our after-change hook so that our hook is
@@ -1341,23 +1355,6 @@ Eglot replaces the buffer-local value with only its own backend."
   (setq flywrite--idle-timer
         (run-with-idle-timer flywrite-idle-delay t
                              #'flywrite--idle-timer-fn (current-buffer)))
-
-  ;; Defer system prompt logging so file-local variables are in
-  ;; effect.  During find-file, mode hooks run before
-  ;; hack-local-variables; a 0-delay timer fires after find-file
-  ;; completes.
-  (let ((buf (current-buffer)))
-    (run-with-timer
-     0 nil
-     (lambda ()
-       (when (and (buffer-live-p buf)
-                  (buffer-local-value 'flywrite-mode buf))
-         (with-current-buffer buf
-           (flywrite--log "prompt=%s"
-                          (if (symbolp flywrite-system-prompt)
-                              flywrite-system-prompt "custom"))
-           (flywrite--log "System prompt:\n%s"
-                          (flywrite--get-system-prompt)))))))
 
   (flywrite--log (concat "flywrite-mode enabled in %s"
                          " (emacs %s, url=%s, model=%s,"

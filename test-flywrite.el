@@ -892,8 +892,7 @@
   (let ((flywrite-api-url nil))
     (with-temp-buffer
       (text-mode)
-      (should-error (flywrite-mode 1) :type 'error)
-      (should-not flywrite-mode))))
+      (should-error (flywrite--validate-config) :type 'error))))
 
 
 (ert-deftest flywrite-test-validate-config-no-api-key-anthropic ()
@@ -905,8 +904,7 @@
     (setenv "FLYWRITE_API_KEY" nil)
     (with-temp-buffer
       (text-mode)
-      (should-error (flywrite-mode 1) :type 'error)
-      (should-not flywrite-mode))))
+      (should-error (flywrite--validate-config) :type 'error))))
 
 
 (ert-deftest flywrite-test-validate-config-no-api-key-openai ()
@@ -918,8 +916,7 @@
     (setenv "FLYWRITE_API_KEY" nil)
     (with-temp-buffer
       (text-mode)
-      (should-error (flywrite-mode 1) :type 'error)
-      (should-not flywrite-mode))))
+      (should-error (flywrite--validate-config) :type 'error))))
 
 
 (ert-deftest flywrite-test-validate-config-no-api-key-gemini ()
@@ -931,8 +928,7 @@
     (setenv "FLYWRITE_API_KEY" nil)
     (with-temp-buffer
       (text-mode)
-      (should-error (flywrite-mode 1) :type 'error)
-      (should-not flywrite-mode))))
+      (should-error (flywrite--validate-config) :type 'error))))
 
 
 ;;;; ---- End-to-end: mock API ----
