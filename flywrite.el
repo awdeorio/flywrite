@@ -107,8 +107,7 @@ Rules:
   Singular 'they'/'their', generic 'he'/'his'/'she'/'hers' are all acceptable.
 - Do not flag spacing between sentences (one or two spaces are
   both acceptable).
-- Ignore markup like LaTeX, HTML, or Org-mode."
-  "System prompt for general prose writing feedback.")
+- Ignore markup like LaTeX, HTML, or Org-mode.")
 
 
 ;; System prompt for academic writing feedback.
@@ -150,8 +149,7 @@ Rules:
 - Flag weasel words (e.g., 'significantly' without statistical
   context, 'often', 'usually' without citation)
 - Flag informal transitions (e.g., 'So,', 'Also,', 'Plus')
-  -- prefer 'Therefore', 'Additionally', 'Moreover'"
-  "System prompt for academic writing feedback.")
+  -- prefer 'Therefore', 'Additionally', 'Moreover'")
 
 
 (defvar flywrite-prompt-alist

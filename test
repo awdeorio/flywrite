@@ -117,20 +117,43 @@ emacs \
   -f ert-run-tests-batch-and-exit
 
 # Check: README system prompt matches source
-# The README custom-prompt example copies the academic prompt and adds extra
-# rules.  Extract the academic prompt from both files (up through the last
-# built-in rule) and verify they match.
+# The README "Replace a built-in prompt" example copies the academic prompt and
+# adds extra rules.  Use Emacs to parse the elisp strings from both files, then
+# verify the README version starts with the source and is strictly longer.
 echo "Check: README system prompt matches source"
-diff <( \
-  sed -n '/^(defvar flywrite-academic-prompt$/,/^  -- prefer/{
-    /^(defvar/d
-    p
-  }' flywrite.el \
-  | sed '1s/^  "//; $s/"$//' \
-) <( \
-  sed -n '/^  "You are a writing assistant/,/  -- prefer/{p;}' README.md \
-  | sed '1s/^  "//; $s/"$//' \
+
+FLYWRITE_SYSTEM_PROMPT=$(
+  emacs -Q --batch -l flywrite.el --eval '(princ flywrite-academic-prompt)'
 )
+if [ -z "${FLYWRITE_SYSTEM_PROMPT}" ]; then
+  echo "Error: failed to extract system prompt from flywrite.el" >&2
+  exit 1
+fi
+
+README_SYSTEM_PROMPT=$(
+  emacs -Q --batch --eval '
+(with-temp-buffer
+  (insert-file-contents "README.md")
+  (while (re-search-forward "(setq flywrite-academic-prompt" nil t)
+    (goto-char (match-beginning 0))
+    (let ((form (read (current-buffer))))
+      (when (stringp (nth 2 form))
+        (princ (nth 2 form))))))'
+)
+if [ -z "${README_SYSTEM_PROMPT}" ]; then
+  echo "Error: failed to extract system prompt from README.md" >&2
+  exit 1
+fi
+
+# README prompt must start with the source prompt and be strictly longer
+if [ "${README_SYSTEM_PROMPT}" = "${FLYWRITE_SYSTEM_PROMPT}" ]; then
+  echo "Error: README system prompt is identical to source (should be longer)" >&2
+  exit 1
+fi
+if [ "${README_SYSTEM_PROMPT#"${FLYWRITE_SYSTEM_PROMPT}"}" = "${README_SYSTEM_PROMPT}" ]; then
+  echo "Error: README system prompt does not start with flywrite.el prompt" >&2
+  exit 1
+fi
 
 # Clean up
 rm -f ./*.elc
