@@ -43,13 +43,7 @@ Run `M-x flywrite-mode`.  As you move or type, flywrite will automatically run c
 - `prose`: grammar, clarity, and style feedback
 - `academic`: adds rules for formal academic writing: contractions, hedging, weasel words, etc. (default)
 
-**Per-user prompt:** Set the prompt style in your Emacs config. This applies to all files unless overridden by a per-file or per-directory setting.
-
-```elisp
-(setq flywrite-system-prompt 'academic)  ; or 'prose
-```
-
-**Add rules to a built-in prompt:** Append to `flywrite-academic-prompt` or `flywrite-prose-prompt`.  This preserves upstream changes when the package is updated.
+**Extend a built-in prompt:** Append to `flywrite-academic-prompt` or `flywrite-prose-prompt`.  This preserves upstream changes when the package is updated.
 
 ```elisp
 (setq flywrite-academic-prompt
@@ -58,7 +52,7 @@ Run `M-x flywrite-mode`.  As you move or type, flywrite will automatically run c
               "\n- Flag passive voice"))
 ```
 
-**Replace a built-in prompt:** For full control, replace `flywrite-academic-prompt` or `flywrite-prose-prompt`.  This won't pick up upstream prompt changes on package update.
+**Replace a built-in prompt:** For full control, override `flywrite-academic-prompt` or `flywrite-prose-prompt`.  This won't pick up upstream prompt changes on package update.
 
 ```elisp
 (setq flywrite-academic-prompt
@@ -102,7 +96,7 @@ Rules:
 - Flag passive voice")
 ```
 
-**Custom named style:** Register a new prompt in `flywrite-prompt-alist`, then select it.
+**Create a new style:** Register a new prompt in `flywrite-prompt-alist`, then select it.
 
 ```elisp
 (defvar my-scifi-prompt
@@ -128,6 +122,8 @@ Rules:
 (setq flywrite-system-prompt 'scifi)
 ```
 
+**Per-buffer prompt:** Run `M-x flywrite-set-prompt` to change the prompt style for the current buffer.  Shows all registered styles with completion.
+
 **Per-file prompt:** Add a file-local variable at the top of a file to override the prompt style for that file only. Emacs will apply it automatically when the file is opened.
 
 | File type | First-line variable |
@@ -143,7 +139,11 @@ Rules:
 ((nil . ((flywrite-system-prompt . prose))))
 ```
 
-**Switch prompt interactively:** Run `M-x flywrite-set-prompt` to change the prompt style for the current buffer.  Shows all registered styles with completion.
+**Per-user prompt:** Set the prompt style in your Emacs config. This applies to all files unless overridden by a per-buffer, per-file, or per-directory setting.
+
+```elisp
+(setq flywrite-system-prompt 'prose)
+```
 
 ### Settings
 
