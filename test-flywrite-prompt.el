@@ -42,7 +42,7 @@
                     "a big deal.")
            :description ,(concat "contractions and informal "
                                  "language in academic writing")
-           :expected ((prose . 0) (academic . 3)))
+           :expected ((prose . 0) (academic . 1)))
     (:text ,(concat "Him and his friend went to the store "
                     "to buy some grocerys.")
            :description "pronoun case error and misspelling"
@@ -118,6 +118,14 @@
            :description ,(concat "academic-only errors: hedging, "
                                  "weasel words, informal language")
            :expected ((prose . 1) (academic . 11)))
+    (:text ,(concat "Each student must submit their "
+                    "homework.")
+           :description "singular they (correct)"
+           :expected ((prose . 0) (academic . 0)))
+    (:text ,(concat "Each student must submit his "
+                    "homework.")
+           :description "generic masculine pronoun (not an error)"
+           :expected ((prose . 0) (academic . 0)))
     ;; Paragraph-sized inputs (multi-sentence)
     (:text ,(concat "The quick brown fox jumped over the "
                     "lazy dog.  Him and his friend went to "

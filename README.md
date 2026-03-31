@@ -70,10 +70,12 @@ Rules:
 - \"quote\" must be an exact substring of the input
 - Keep reasons under 12 words
 - One entry per distinct issue
+- Err on the side of not flagging.  Only flag clear, unambiguous errors.
 - Do not flag correct text
+- Do not flag pronoun gender choices for a generic or unknown person.
+  Singular 'they'/'their', generic 'he'/'his'/'she'/'hers' are all acceptable.
 - Do not flag spacing between sentences (one or two spaces are
   both acceptable).
-- Err on the side of not flagging.  Only flag clear, unambiguous errors.
 - Ignore markup like LaTeX, HTML, or Org-mode.
 - Flag informal language, contractions, and colloquialisms
 - Flag vague hedging

@@ -1,12 +1,12 @@
 {
   "prompts": {
-    "1a68565c69b2938da6cd650ce0e6ddf1": "You are a writing assistant. Analyze the text for grammar,\nclarity, and style.  Return JSON only. No text outside the JSON.\n\nIf the text is fine:\n{\"suggestions\": []}\n\nIf there are issues:\n{\"suggestions\": [{\"quote\": \"exact substring\",\n  \"reason\": \"brief explanation\"}]}\n\nRules:\n- \"quote\" must be an exact substring of the input\n- Keep reasons under 12 words\n- One entry per distinct issue\n- Do not flag correct text\n- Do not flag spacing between sentences (one or two spaces are\n  both acceptable).\n- Err on the side of not flagging.  Only flag clear, unambiguous errors.\n- Ignore markup like LaTeX, HTML, or Org-mode.\n- Flag informal language, contractions, and colloquialisms\n- Flag vague hedging\n  (e.g., 'a lot', 'thing(s)', 'stuff', 'really')\n- Flag unsupported opinions\n  (e.g., 'I think X is better') -- state evidence instead\n- Flag unsupported superlatives\n  (e.g., 'the best', 'the most important')\n- Flag wordiness and nominalizations\n  (e.g., 'make an adjustment' -> 'adjust')\n- Flag subjective qualifiers\n  (e.g., 'obviously', 'clearly', 'of course')\n- Flag ambiguous 'this/it/they' pronouns without antecedents\n  (e.g., 'This is important' -- this what?)\n- Flag weasel words (e.g., 'significantly' without statistical\n  context, 'often', 'usually' without citation)\n- Flag informal transitions (e.g., 'So,', 'Also,', 'Plus')\n  -- prefer 'Therefore', 'Additionally', 'Moreover'",
-    "b51d4bf6522aa05e1109b16460222049": "You are a writing assistant. Analyze the text for grammar,\nclarity, and style.  Return JSON only. No text outside the JSON.\n\nIf the text is fine:\n{\"suggestions\": []}\n\nIf there are issues:\n{\"suggestions\": [{\"quote\": \"exact substring\",\n  \"reason\": \"brief explanation\"}]}\n\nRules:\n- \"quote\" must be an exact substring of the input\n- Keep reasons under 12 words\n- One entry per distinct issue\n- Do not flag correct text\n- Focus on objective errors: misspellings, wrong words\n  (e.g., affect/effect, there/their), subject-verb disagreement,\n  pronoun case, missing or wrong punctuation, and redundant words.\n- Do not flag style preferences or debatable grammar rules\n  (e.g., comma before 'which', comma after introductory phrase,\n  'like' vs 'such as', split infinitives, ending sentences\n  with prepositions).  When a comma is optional, do not flag it.\n- Do not flag spacing between sentences (one or two spaces are\n  both acceptable).\n- Err on the side of not flagging.  Only flag clear, unambiguous errors.\n- Ignore markup like LaTeX, HTML, or Org-mode."
+    "0736cd1e0c90aef552249f3a5d53c66e": "You are a writing assistant. Analyze the text for grammar,\nclarity, and style.  Return JSON only. No text outside the JSON.\n\nIf the text is fine:\n{\"suggestions\": []}\n\nIf there are issues:\n{\"suggestions\": [{\"quote\": \"exact substring\",\n  \"reason\": \"brief explanation\"}]}\n\nRules:\n- \"quote\" must be an exact substring of the input\n- Keep reasons under 12 words\n- One entry per distinct issue\n- Err on the side of not flagging.  Only flag clear, unambiguous errors.\n- Do not flag correct text\n- Do not flag pronoun gender choices for a generic or unknown person.\n  Singular 'they'/'their', generic 'he'/'his'/'she'/'hers' are all acceptable.\n- Do not flag spacing between sentences (one or two spaces are\n  both acceptable).\n- Ignore markup like LaTeX, HTML, or Org-mode.\n- Flag informal language, contractions, and colloquialisms\n- Flag vague hedging\n  (e.g., 'a lot', 'thing(s)', 'stuff', 'really')\n- Flag unsupported opinions\n  (e.g., 'I think X is better') -- state evidence instead\n- Flag unsupported superlatives\n  (e.g., 'the best', 'the most important')\n- Flag wordiness and nominalizations\n  (e.g., 'make an adjustment' -> 'adjust')\n- Flag subjective qualifiers\n  (e.g., 'obviously', 'clearly', 'of course')\n- Flag ambiguous 'this/it/they' pronouns without antecedents\n  (e.g., 'This is important' -- this what?)\n- Flag weasel words (e.g., 'significantly' without statistical\n  context, 'often', 'usually' without citation)\n- Flag informal transitions (e.g., 'So,', 'Also,', 'Plus')\n  -- prefer 'Therefore', 'Additionally', 'Moreover'",
+    "680f94266702822d3240e61943181aad": "You are a writing assistant. Analyze the text for grammar,\nclarity, and style.  Return JSON only. No text outside the JSON.\n\nIf the text is fine:\n{\"suggestions\": []}\n\nIf there are issues:\n{\"suggestions\": [{\"quote\": \"exact substring\",\n  \"reason\": \"brief explanation\"}]}\n\nRules:\n- \"quote\" must be an exact substring of the input\n- Keep reasons under 12 words\n- One entry per distinct issue\n- Err on the side of not flagging.  Only flag clear, unambiguous errors.\n- Do not flag correct text\n- Focus on objective errors: misspellings, wrong words\n  (e.g., affect/effect, there/their), subject-verb disagreement,\n  pronoun case, missing or wrong punctuation, and redundant words.\n- Do not flag style preferences or debatable grammar rules\n  (e.g., comma before 'which', comma after introductory phrase,\n  'like' vs 'such as', split infinitives, ending sentences\n  with prepositions).  When a comma is optional, do not flag it.\n- Do not flag pronoun gender choices for a generic or unknown person.\n  Singular 'they'/'their', generic 'he'/'his'/'she'/'hers' are all acceptable.\n- Do not flag spacing between sentences (one or two spaces are\n  both acceptable).\n- Ignore markup like LaTeX, HTML, or Org-mode."
   },
   "entries": [
     {
       "text": "Between you and I, this project is more bigger than we expected.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -17,15 +17,15 @@
           },
           {
             "quote": "more bigger",
-            "reason": "Double comparative - use either 'bigger' or 'much bigger'"
+            "reason": "Double comparative - use either 'bigger' or 'more big'"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:50Z"
+      "timestamp": "2026-03-31T13:13:36Z"
     },
     {
       "text": "Between you and I, this project is more bigger than we expected.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -36,15 +36,15 @@
           },
           {
             "quote": "more bigger",
-            "reason": "Should be 'bigger' or 'much bigger' (avoid double comparative)"
+            "reason": "Should be 'bigger' or 'much bigger' (double comparative)"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:16Z"
+      "timestamp": "2026-03-31T13:13:28Z"
     },
     {
       "text": "Each of the students need to submit there homework by Friday.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -59,11 +59,11 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:50Z"
+      "timestamp": "2026-03-31T13:13:33Z"
     },
     {
       "text": "Each of the students need to submit there homework by Friday.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -78,18 +78,58 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:15Z"
+      "timestamp": "2026-03-31T13:13:27Z"
+    },
+    {
+      "text": "Each student must submit his homework.",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0,
+      "response": {
+        "suggestions": []
+      },
+      "timestamp": "2026-03-31T13:13:35Z"
+    },
+    {
+      "text": "Each student must submit his homework.",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0,
+      "response": {
+        "suggestions": []
+      },
+      "timestamp": "2026-03-31T13:13:29Z"
+    },
+    {
+      "text": "Each student must submit their homework.",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0,
+      "response": {
+        "suggestions": []
+      },
+      "timestamp": "2026-03-31T13:13:35Z"
+    },
+    {
+      "text": "Each student must submit their homework.",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0,
+      "response": {
+        "suggestions": []
+      },
+      "timestamp": "2026-03-31T13:13:30Z"
     },
     {
       "text": "Him and his friend went to the store to buy some grocerys.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": [
           {
             "quote": "Him and his friend",
-            "reason": "Should be 'He and his friend' - subject pronoun needed"
+            "reason": "Should be 'He and his friend' (subject pronoun)"
           },
           {
             "quote": "grocerys",
@@ -97,11 +137,11 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:50Z"
+      "timestamp": "2026-03-31T13:13:31Z"
     },
     {
       "text": "Him and his friend went to the store to buy some grocerys.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -116,11 +156,11 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:15Z"
+      "timestamp": "2026-03-31T13:13:27Z"
     },
     {
       "text": "I think that this is obviously the most important thing we need to address. We found that the treatment significantly improved outcomes, and a lot of participants felt that it was really effective. So, the results clearly show that this has a positive impact on stuff.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -131,7 +171,7 @@
           },
           {
             "quote": "obviously",
-            "reason": "Subjective qualifier - remove hedging language"
+            "reason": "Subjective qualifier - remove unnecessary hedging"
           },
           {
             "quote": "the most important thing",
@@ -142,24 +182,24 @@
             "reason": "Ambiguous pronoun - specify what 'this' refers to"
           },
           {
-            "quote": "significantly improved",
-            "reason": "Weasel word - provide statistical context for 'significantly'"
+            "quote": "significantly",
+            "reason": "Weasel word - provide statistical context or specific data"
           },
           {
             "quote": "a lot of",
             "reason": "Vague hedging - specify exact number or percentage"
           },
           {
-            "quote": "really effective",
-            "reason": "Vague hedging - define 'really' with specific metrics"
+            "quote": "really",
+            "reason": "Vague hedging - use precise language instead"
           },
           {
             "quote": "So,",
-            "reason": "Informal transition - use 'Therefore' instead"
+            "reason": "Informal transition - use 'Therefore' or 'Consequently'"
           },
           {
-            "quote": "clearly show",
-            "reason": "Subjective qualifier - let results speak for themselves"
+            "quote": "clearly",
+            "reason": "Subjective qualifier - let evidence speak for itself"
           },
           {
             "quote": "this has",
@@ -167,15 +207,15 @@
           },
           {
             "quote": "stuff",
-            "reason": "Vague hedging - specify what is being affected"
+            "reason": "Vague language - specify what is being affected"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:56Z"
+      "timestamp": "2026-03-31T13:13:39Z"
     },
     {
       "text": "I think that this is obviously the most important thing we need to address. We found that the treatment significantly improved outcomes, and a lot of participants felt that it was really effective. So, the results clearly show that this has a positive impact on stuff.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -186,11 +226,11 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:17Z"
+      "timestamp": "2026-03-31T13:13:29Z"
     },
     {
       "text": "She could of finished the report on time if she would have started earlier.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -205,11 +245,11 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:50Z"
+      "timestamp": "2026-03-31T13:13:34Z"
     },
     {
       "text": "She could of finished the report on time if she would have started earlier.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -224,31 +264,31 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:15Z"
+      "timestamp": "2026-03-31T13:13:27Z"
     },
     {
       "text": "She picked up her coffee, took a quiet sip, and turned to the first page of the newspaper.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": []
       },
-      "timestamp": "2026-03-24T20:20:49Z"
+      "timestamp": "2026-03-31T13:13:30Z"
     },
     {
       "text": "She picked up her coffee, took a quiet sip, and turned to the first page of the newspaper.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": []
       },
-      "timestamp": "2026-03-24T20:14:14Z"
+      "timestamp": "2026-03-31T13:13:26Z"
     },
     {
       "text": "So, the results clearly show that this has a positive impact on stuff.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -259,7 +299,7 @@
           },
           {
             "quote": "clearly show",
-            "reason": "Subjective qualifier; let the evidence speak for itself"
+            "reason": "Subjective qualifier; state evidence instead"
           },
           {
             "quote": "this",
@@ -267,15 +307,15 @@
           },
           {
             "quote": "stuff",
-            "reason": "Vague term; specify what is being affected"
+            "reason": "Vague term; specify what is being impacted"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:56Z"
+      "timestamp": "2026-03-31T13:13:36Z"
     },
     {
       "text": "So, the results clearly show that this has a positive impact on stuff.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -286,11 +326,11 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:17Z"
+      "timestamp": "2026-03-31T13:13:28Z"
     },
     {
       "text": "The benchmarks show the approach is more efficient then brute force search.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -301,66 +341,66 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:51Z"
+      "timestamp": "2026-03-31T13:13:33Z"
     },
     {
       "text": "The benchmarks show the approach is more efficient then brute force search.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": [
           {
-            "quote": "more efficient then brute",
+            "quote": "more efficient then brute force",
             "reason": "Should be 'than' not 'then' for comparison"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:16Z"
+      "timestamp": "2026-03-31T13:13:28Z"
     },
     {
       "text": "The morning light filtered through the curtains and cast long shadows across the floor.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": []
       },
-      "timestamp": "2026-03-24T20:20:49Z"
+      "timestamp": "2026-03-31T13:13:30Z"
     },
     {
       "text": "The morning light filtered through the curtains and cast long shadows across the floor.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": []
       },
-      "timestamp": "2026-03-24T20:14:14Z"
+      "timestamp": "2026-03-31T13:13:26Z"
     },
     {
       "text": "The morning light filtered through the curtains and cast long shadows across the floor.  She picked up her coffee, took a quiet sip, and turned to the first page of the newspaper.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": []
       },
-      "timestamp": "2026-03-24T20:20:52Z"
+      "timestamp": "2026-03-31T13:13:36Z"
     },
     {
       "text": "The morning light filtered through the curtains and cast long shadows across the floor.  She picked up her coffee, took a quiet sip, and turned to the first page of the newspaper.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": []
       },
-      "timestamp": "2026-03-24T20:14:17Z"
+      "timestamp": "2026-03-31T13:13:29Z"
     },
     {
       "text": "The optimization had a significant affect on runtime performance.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -371,11 +411,11 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:50Z"
+      "timestamp": "2026-03-31T13:13:34Z"
     },
     {
       "text": "The optimization had a significant affect on runtime performance.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -386,38 +426,38 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:16Z"
+      "timestamp": "2026-03-31T13:13:28Z"
     },
     {
       "text": "The quick brown fox jumped over the lazy dog.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": []
       },
-      "timestamp": "2026-03-24T20:20:48Z"
+      "timestamp": "2026-03-31T13:13:33Z"
     },
     {
       "text": "The quick brown fox jumped over the lazy dog.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": []
       },
-      "timestamp": "2026-03-24T20:14:14Z"
+      "timestamp": "2026-03-31T13:13:26Z"
     },
     {
       "text": "The quick brown fox jumped over the lazy dog.  Him and his friend went to the store to buy some grocerys.  The weather was very extremely hot outside yesterday.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": [
           {
             "quote": "Him and his friend",
-            "reason": "Should be 'He and his friend' - subject pronoun needed"
+            "reason": "Should be 'He and his friend' - use subject pronoun"
           },
           {
             "quote": "grocerys",
@@ -429,11 +469,11 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:53Z"
+      "timestamp": "2026-03-31T13:13:38Z"
     },
     {
       "text": "The quick brown fox jumped over the lazy dog.  Him and his friend went to the store to buy some grocerys.  The weather was very extremely hot outside yesterday.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -448,48 +488,40 @@
           },
           {
             "quote": "very extremely",
-            "reason": "Redundant intensifiers, use either 'very' or 'extremely'"
+            "reason": "Redundant intensifiers"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:18Z"
+      "timestamp": "2026-03-31T13:13:32Z"
     },
     {
       "text": "The results don't support the hypothesis, and it's really not a big deal.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": [
           {
-            "quote": "it's",
-            "reason": "Avoid contractions in formal writing"
-          },
-          {
-            "quote": "really",
-            "reason": "Vague intensifier - be more specific"
-          },
-          {
-            "quote": "not a big deal",
-            "reason": "Informal expression - state the actual significance"
+            "quote": "really not a big deal",
+            "reason": "Vague hedging with 'really' and informal dismissive language"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:50Z"
+      "timestamp": "2026-03-31T13:13:31Z"
     },
     {
       "text": "The results don't support the hypothesis, and it's really not a big deal.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": []
       },
-      "timestamp": "2026-03-24T20:14:14Z"
+      "timestamp": "2026-03-31T13:13:26Z"
     },
     {
       "text": "The students who was in the program recieved there certificates at the ceremony last friday.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -508,15 +540,15 @@
           },
           {
             "quote": "friday",
-            "reason": "Capitalization: day names should be capitalized"
+            "reason": "Capitalization error: should be 'Friday'"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:52Z"
+      "timestamp": "2026-03-31T13:13:35Z"
     },
     {
       "text": "The students who was in the program recieved there certificates at the ceremony last friday.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -539,11 +571,11 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:18Z"
+      "timestamp": "2026-03-31T13:13:29Z"
     },
     {
       "text": "The weather was very extremely hot outside yesterday.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -554,45 +586,45 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:50Z"
+      "timestamp": "2026-03-31T13:13:34Z"
     },
     {
       "text": "The weather was very extremely hot outside yesterday.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": [
           {
             "quote": "very extremely",
-            "reason": "Redundant adverbs - use either 'very' or 'extremely'"
+            "reason": "Redundant intensifiers - use either 'very' or 'extremely'"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:16Z"
+      "timestamp": "2026-03-31T13:13:27Z"
     },
     {
       "text": "Their going to the park later today, irregardless of the rain.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": [
           {
             "quote": "Their going",
-            "reason": "Should be 'They're going' (contraction) or 'They are going'"
+            "reason": "Should be 'They're going' (contraction of 'they are')"
           },
           {
             "quote": "irregardless",
-            "reason": "Non-standard word; use 'regardless' instead"
+            "reason": "Non-standard word; use 'regardless'"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:50Z"
+      "timestamp": "2026-03-31T13:13:32Z"
     },
     {
       "text": "Their going to the park later today, irregardless of the rain.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -607,38 +639,38 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:15Z"
+      "timestamp": "2026-03-31T13:13:26Z"
     },
     {
       "text": "Their going to the park later today, irregardless of the rain.  Each of the students need to submit there homework by Friday.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": [
           {
             "quote": "Their going",
-            "reason": "Should be 'They're' (they are)"
+            "reason": "Should be 'They're' (they are) not possessive 'Their'"
           },
           {
             "quote": "irregardless",
-            "reason": "Use 'regardless' instead"
+            "reason": "Use 'regardless' - 'irregardless' is nonstandard"
           },
           {
             "quote": "Each of the students need",
-            "reason": "Subject-verb disagreement: 'Each...needs'"
+            "reason": "Subject-verb disagreement - 'Each' is singular, use 'needs'"
           },
           {
             "quote": "there homework",
-            "reason": "Should be 'their' (possessive)"
+            "reason": "Should be 'their' (possessive) not 'there' (location)"
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:53Z"
+      "timestamp": "2026-03-31T13:13:39Z"
     },
     {
       "text": "Their going to the park later today, irregardless of the rain.  Each of the students need to submit there homework by Friday.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
@@ -661,18 +693,18 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:14:19Z"
+      "timestamp": "2026-03-31T13:13:32Z"
     },
     {
       "text": "We feel the results are promising.",
-      "prompt_hash": "1a68565c69b2938da6cd650ce0e6ddf1",
+      "prompt_hash": "0736cd1e0c90aef552249f3a5d53c66e",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": [
           {
             "quote": "We feel",
-            "reason": "Use stronger, more objective language than 'feel'"
+            "reason": "Replace subjective 'feel' with objective evidence or data"
           },
           {
             "quote": "promising",
@@ -680,17 +712,17 @@
           }
         ]
       },
-      "timestamp": "2026-03-24T20:20:52Z"
+      "timestamp": "2026-03-31T13:13:34Z"
     },
     {
       "text": "We feel the results are promising.",
-      "prompt_hash": "b51d4bf6522aa05e1109b16460222049",
+      "prompt_hash": "680f94266702822d3240e61943181aad",
       "model": "claude-sonnet-4-20250514",
       "temperature": 0,
       "response": {
         "suggestions": []
       },
-      "timestamp": "2026-03-24T20:14:16Z"
+      "timestamp": "2026-03-31T13:13:28Z"
     }
   ]
 }

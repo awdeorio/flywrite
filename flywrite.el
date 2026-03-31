@@ -94,6 +94,7 @@ Rules:
 - \"quote\" must be an exact substring of the input
 - Keep reasons under 12 words
 - One entry per distinct issue
+- Err on the side of not flagging.  Only flag clear, unambiguous errors.
 - Do not flag correct text
 - Focus on objective errors: misspellings, wrong words
   (e.g., affect/effect, there/their), subject-verb disagreement,
@@ -102,9 +103,10 @@ Rules:
   (e.g., comma before 'which', comma after introductory phrase,
   'like' vs 'such as', split infinitives, ending sentences
   with prepositions).  When a comma is optional, do not flag it.
+- Do not flag pronoun gender choices for a generic or unknown person.
+  Singular 'they'/'their', generic 'he'/'his'/'she'/'hers' are all acceptable.
 - Do not flag spacing between sentences (one or two spaces are
   both acceptable).
-- Err on the side of not flagging.  Only flag clear, unambiguous errors.
 - Ignore markup like LaTeX, HTML, or Org-mode."
   "System prompt for general prose writing feedback.")
 
@@ -125,10 +127,12 @@ Rules:
 - \"quote\" must be an exact substring of the input
 - Keep reasons under 12 words
 - One entry per distinct issue
+- Err on the side of not flagging.  Only flag clear, unambiguous errors.
 - Do not flag correct text
+- Do not flag pronoun gender choices for a generic or unknown person.
+  Singular 'they'/'their', generic 'he'/'his'/'she'/'hers' are all acceptable.
 - Do not flag spacing between sentences (one or two spaces are
   both acceptable).
-- Err on the side of not flagging.  Only flag clear, unambiguous errors.
 - Ignore markup like LaTeX, HTML, or Org-mode.
 - Flag informal language, contractions, and colloquialisms
 - Flag vague hedging
