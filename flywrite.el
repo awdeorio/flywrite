@@ -1357,6 +1357,9 @@ Eglot replaces the buffer-local value with only its own backend."
     (add-hook 'eglot-managed-mode-hook
               #'flywrite--ensure-flymake-backend nil t))
 
+  ;; Clean up if the buffer is killed while the mode is active
+  (add-hook 'kill-buffer-hook #'flywrite--disable nil t)
+
   ;; Start the idle timer that drains the dirty registry
   (setq flywrite--idle-timer
         (run-with-idle-timer flywrite-idle-delay t
@@ -1400,9 +1403,10 @@ Eglot replaces the buffer-local value with only its own backend."
 
   (flywrite--kill-connection-buffers)
 
-  ;; Unhook from after-change and eglot
+  ;; Unhook from after-change, eglot, and kill-buffer
   (remove-hook 'after-change-functions #'flywrite--after-change t)
   (remove-hook 'eglot-managed-mode-hook #'flywrite--ensure-flymake-backend t)
+  (remove-hook 'kill-buffer-hook #'flywrite--disable t)
 
   ;; Clear diagnostics before reporting so flymake-start doesn't
   ;; re-report stale diagnostics via the flywrite-flymake backend
