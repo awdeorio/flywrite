@@ -940,8 +940,8 @@ the region content.  HASH is for logging."
          (match-pos (and quote-str
                          (string-match (regexp-quote quote-str) region-text))))
     (if match-pos
-        (let ((diag-beg (+ beg match-pos))
-              (diag-end (+ beg match-pos (length quote-str))))
+        (let ((diag-beg (copy-marker (+ beg match-pos)))
+              (diag-end (copy-marker (+ beg match-pos (length quote-str)) t)))
           (push (flymake-make-diagnostic
                  buf diag-beg diag-end 'flywrite-diagnostic-type
                  (concat reason " [flywrite]"))
