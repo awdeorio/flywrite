@@ -948,7 +948,7 @@ the region content.  HASH is for logging."
                  buf diag-beg diag-end 'flywrite-diagnostic-type
                  (concat reason " [flywrite]"))
                 flywrite--diagnostics)
-          (flywrite--log "Diagnostic: [%d-%d] %s hash=%s"
+          (flywrite--log "Diagnostic: [%s-%s] %s hash=%s"
                          diag-beg diag-end reason hash))
       (flywrite--log "Quote not found, skipping: %s hash=%s" quote-str hash))))
 
