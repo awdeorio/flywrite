@@ -76,6 +76,8 @@ Rules:
   Singular 'they'/'their', generic 'he'/'his'/'she'/'hers' are all acceptable.
 - Do not flag spacing between sentences (one or two spaces are
   both acceptable).
+- Do not flag abbreviations, acronyms, initialisms, or shortened forms.
+  Assume they are defined elsewhere.
 - Ignore markup like LaTeX, HTML, or Org-mode.
 - Flag informal language, contractions, and colloquialisms
 - Flag vague hedging

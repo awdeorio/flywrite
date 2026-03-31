@@ -81,7 +81,7 @@
            :expected ((prose . 1) (academic . 1)))
     (:text "We feel the results are promising."
            :description "subjective, vague"
-           :expected ((prose . 0) (academic . 1)))
+           :expected ((prose . 0) (academic . 2)))
     ;; From samples/text-general-and-academic.txt
     (:text ,(concat "The students who was in the program "
                     "recieved there certificates at the "
@@ -126,6 +126,15 @@
                     "homework.")
            :description "generic masculine pronoun (not an error)"
            :expected ((prose . 0) (academic . 0)))
+
+    ;; flywrite sees one paragraph at a time, so it cannot know whether
+    ;; an abbreviation was expanded earlier in the document.
+    (:text ,(concat "We analyzed student programming assignments "
+                    "for indicators of over-reliance on GenAI.")
+           :description ,(concat "abbreviation without expansion "
+                                 "(no cross-paragraph context)")
+           :expected ((prose . 0) (academic . 0)))
+
     ;; Paragraph-sized inputs (multi-sentence)
     (:text ,(concat "The quick brown fox jumped over the "
                     "lazy dog.  Him and his friend went to "
