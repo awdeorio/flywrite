@@ -1686,6 +1686,120 @@ Re-check flags \"wented\" instead of the original \"Him\"."
       (flywrite-mode -1))))
 
 
+(ert-deftest flywrite-test-e2e-race-concurrent-multi-paragraph ()
+  "Concurrent requests across 3 paragraphs with edits during flight.
+P1 has no errors, P2 has \"Him\", P3 has no errors.  Concurrency
+cap is 2, so P1 and P2 dispatch immediately while P3 is queued.
+P1 is edited (length change) while requests are in-flight,
+shifting P2 and P3 positions.  All deferred responses are
+delivered, stale ones re-dirtied, and a final re-check produces
+the correct diagnostic on \"Him\"."
+  (let* ((flywrite-api-url
+          "https://api.openai.com/v1/chat/completions")
+         (flywrite-api-key "sk-fake-test-key")
+         (flywrite-idle-delay 0.1)
+         (flywrite-eager nil)
+         (flywrite-max-concurrent 2)
+         (mock-response-json nil)
+         ;; Deferred callbacks: list of (callback . resp-buf)
+         (deferred-calls nil)
+         (synchronous nil))
+
+    (with-temp-buffer
+      (text-mode)
+
+      ;; Three paragraphs
+      (insert "The weather is nice today.\n\n"
+              "Him went to the store.\n\n"
+              "The birds are singing.")
+
+      ;; Mock response flags "Him".  For paragraphs without
+      ;; "Him" the quote search fails silently (no diagnostic).
+      (let ((inner (json-encode
+                    '((suggestions
+                       . [((quote . "Him")
+                           (reason
+                            . "Use \"He\" as subject"))])))))
+        (setq mock-response-json
+              (json-encode
+               `((choices
+                  . [((message
+                       . ((content . ,inner))))])))))
+
+      (cl-letf
+          (((symbol-function 'url-retrieve)
+            (lambda (_url callback
+                          &optional _cbargs _silent _inhibit)
+              (let ((resp-buf
+                     (flywrite-test--make-response-buffer
+                      mock-response-json)))
+                (if synchronous
+                    (progn
+                      (with-current-buffer resp-buf
+                        (goto-char (point-min))
+                        (funcall callback nil))
+                      resp-buf)
+                  (push (cons callback resp-buf)
+                        deferred-calls)
+                  resp-buf)))))
+
+        (flywrite-mode 1)
+
+        ;; --- Step 1: Dirty all paragraphs and dispatch ---
+        (dolist (entry (flywrite--collect-paragraphs-in-region
+                        1 (point-max)))
+          (push entry flywrite--dirty-registry))
+        ;; Cap=2: P1 and P2 dispatch; P3 queued.
+        (flywrite--idle-timer-fn (current-buffer))
+        (should (= (length deferred-calls) 2))
+        (should (= flywrite--in-flight 2))
+        (should (= (length flywrite--pending-queue) 1))
+
+        ;; --- Step 2: Edit P1 (length change) ---
+        ;; "nice" (4) -> "beautiful" (9), +5 chars
+        (goto-char 1)
+        (search-forward "nice")
+        (replace-match "beautiful")
+
+        ;; --- Step 3: Deliver all deferred responses ---
+        ;; Each delivery decrements in-flight and may drain
+        ;; the queue (P3 dispatched, also deferred).
+        (while deferred-calls
+          (let* ((entry (pop deferred-calls))
+                 (cb (car entry))
+                 (buf (cdr entry)))
+            (with-current-buffer buf
+              (goto-char (point-min))
+              (funcall cb nil))))
+
+        ;; --- Step 4: Switch to synchronous, re-check ---
+        (setq synchronous t)
+
+        ;; Deliver any callbacks queued during step 3
+        ;; (P3 drained from pending queue).
+        (while deferred-calls
+          (let* ((entry (pop deferred-calls))
+                 (cb (car entry))
+                 (buf (cdr entry)))
+            (with-current-buffer buf
+              (goto-char (point-min))
+              (funcall cb nil))))
+
+        ;; Fire idle timer for re-dirtied paragraphs
+        (flywrite--idle-timer-fn (current-buffer))
+
+        ;; --- Step 5: Verify exactly one diagnostic on "Him" ---
+        (should (= (length flywrite--diagnostics) 1))
+        (let ((diag (car flywrite--diagnostics)))
+          (should
+           (string= "Him"
+                    (buffer-substring-no-properties
+                     (flymake-diagnostic-beg diag)
+                     (flymake-diagnostic-end diag))))))
+
+      (flywrite-mode -1))))
+
+
 ;;;; ---- System prompt resolution ----
 
 
