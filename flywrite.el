@@ -479,6 +479,24 @@ Checks font-lock faces and major mode."
 ;;;; ---- Change detection ----
 
 
+(defun flywrite--adjust-diagnostic-positions (change-end delta)
+  "Shift diagnostic positions after the edit by DELTA characters.
+CHANGE-END is the end of the new text, DELTA the size change.
+Flymake converts marker positions to integers when the backend
+reports, so edits in one paragraph leave diagnostics elsewhere
+with stale positions."
+  (let ((old-end (- change-end delta)))
+    (dolist (diag flywrite--diagnostics)
+      (let ((dbeg (flymake-diagnostic-beg diag))
+            (dend (flymake-diagnostic-end diag)))
+        (when (and dbeg dend)
+          (when (>= dbeg old-end)
+            (setf (flymake--diag-beg diag) (+ dbeg delta)))
+          (when (> dend old-end)
+            (setf (flymake--diag-end diag)
+                  (+ dend delta))))))))
+
+
 (defun flywrite--clear-paragraph-diagnostics (ubeg uend)
   "Remove diagnostics overlapping UBEG..UEND and re-report."
   (when flywrite--diagnostics
@@ -538,23 +556,31 @@ Checks font-lock faces and major mode."
                     80 nil nil t))))
 
 
-(defun flywrite--after-change (beg end _len)
+(defun flywrite--after-change (beg end old-len)
   "Hook for `after-change-functions'.  Mark dirty paragraphs.
-BEG and END are the changed region boundaries."
+BEG and END are the changed region boundaries.  OLD-LEN is the
+length of the replaced text."
   (when flywrite-mode
     (condition-case err
-        (let* ((bounds1 (flywrite--paragraph-bounds-at-pos beg))
-               (bounds2 (when (and end (> end beg))
-                          (flywrite--paragraph-bounds-at-pos end)))
-               (paras (if (and bounds2 (not (equal bounds1 bounds2)))
-                          (list bounds1 bounds2)
-                        (list bounds1))))
-
-          ;; An edit near a paragraph boundary can dirty two paragraphs.
-          (dolist (bounds paras)
-            (flywrite--process-changed-paragraph
-             (car bounds) (cdr bounds)
-             (flywrite--content-hash (car bounds) (cdr bounds)))))
+        (progn
+          (let ((delta (- (- end beg) old-len)))
+            (unless (zerop delta)
+              (flywrite--adjust-diagnostic-positions
+               end delta)))
+          (let* ((bounds1 (flywrite--paragraph-bounds-at-pos beg))
+                 (bounds2 (when (and end (> end beg))
+                            (flywrite--paragraph-bounds-at-pos end)))
+                 (paras (if (and bounds2
+                                 (not (equal bounds1 bounds2)))
+                            (list bounds1 bounds2)
+                          (list bounds1))))
+            ;; An edit near a paragraph boundary can dirty two
+            ;; paragraphs.
+            (dolist (bounds paras)
+              (flywrite--process-changed-paragraph
+               (car bounds) (cdr bounds)
+               (flywrite--content-hash
+                (car bounds) (cdr bounds))))))
       (error
        (flywrite--log "Error in after-change: %s buf=%s"
                       (error-message-string err) (buffer-name))))))

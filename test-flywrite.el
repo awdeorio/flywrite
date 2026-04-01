@@ -1126,6 +1126,74 @@
       (flywrite-mode -1))))
 
 
+(ert-deftest flywrite-test-e2e-diagnostic-survives-other-paragraph-edit ()
+  "Diagnostic on paragraph 2 survives an edit to paragraph 1.
+Verifies underlined strings, not numeric positions."
+  (let* ((flywrite-api-url "https://api.openai.com/v1/chat/completions")
+         (flywrite-api-key "sk-fake-test-key")
+         (flywrite-idle-delay 0.1)
+         (flywrite-eager nil)
+         (mock-response-json nil))
+    (with-temp-buffer
+      (text-mode)
+
+      ;; Two paragraphs: first has no errors, second has "Him"
+      (insert "The weather is nice today.\n\nHim went to the store.")
+
+      (cl-letf (((symbol-function 'url-retrieve)
+                 (lambda (_url callback &optional _cbargs _silent _inhibit)
+                   (let ((resp-buf (flywrite-test--make-response-buffer
+                                    mock-response-json)))
+                     (with-current-buffer resp-buf
+                       (goto-char (point-min))
+                       (funcall callback nil))
+                     resp-buf))))
+
+        (flywrite-mode 1)
+
+        ;; Mock response: flag "Him" — only found in paragraph 2
+        (let ((inner (json-encode
+                      '((suggestions
+                         . [((quote . "Him")
+                             (reason
+                              . "Use \"He\" (subject pronoun)"))])))))
+          (setq mock-response-json
+                (json-encode
+                 `((choices
+                    . [((message
+                         . ((content . ,inner))))])))))
+
+        ;; --- Step 1: Check both paragraphs ---
+        (flywrite--after-change 1 (point-max) 0)
+        (flywrite--idle-timer-fn (current-buffer))
+
+        ;; --- Step 2: Verify one diagnostic, underlined text is "Him" ---
+        (should (= (length flywrite--diagnostics) 1))
+        (let ((diag (car flywrite--diagnostics)))
+          (should (string= "Him"
+                           (buffer-substring-no-properties
+                            (flymake-diagnostic-beg diag)
+                            (flymake-diagnostic-end diag)))))
+
+        ;; --- Step 3: Edit paragraph 1 (length-changing replacement) ---
+        (goto-char 1)
+        (search-forward "nice")
+        (replace-match "beautiful")
+
+        ;; --- Step 4: Re-check (paragraph 1 is re-dirtied) ---
+        (flywrite--idle-timer-fn (current-buffer))
+
+        ;; --- Step 5: Verify diagnostic still underlines "Him" ---
+        (should (= (length flywrite--diagnostics) 1))
+        (let ((diag (car flywrite--diagnostics)))
+          (should (string= "Him"
+                           (buffer-substring-no-properties
+                            (flymake-diagnostic-beg diag)
+                            (flymake-diagnostic-end diag))))))
+
+      (flywrite-mode -1))))
+
+
 ;;;; ---- System prompt resolution ----
 
 
