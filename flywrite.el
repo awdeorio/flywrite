@@ -939,6 +939,7 @@ BUF is the source buffer, BEG is the region start, REGION-TEXT is
 the region content.  HASH is for logging."
   (let* ((quote-str (alist-get 'quote suggestion))
          (reason (alist-get 'reason suggestion))
+         (case-fold-search nil)
          (match-pos (and quote-str
                          (string-match (regexp-quote quote-str) region-text))))
     (if match-pos

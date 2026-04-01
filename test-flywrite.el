@@ -1026,6 +1026,53 @@
       (flywrite-mode -1))))
 
 
+(ert-deftest flywrite-test-e2e-case-sensitive-quote-match ()
+  "Diagnostic underlines the exact-case occurrence, not a case-folded match."
+  (let* ((flywrite-api-url "https://api.openai.com/v1/chat/completions")
+         (flywrite-api-key "sk-fake-test-key")
+         (flywrite-idle-delay 0.1)
+         (flywrite-eager nil)
+         (mock-response-json nil))
+    (with-temp-buffer
+      (text-mode)
+      ;; "the show" appears at pos 16 (lowercase) and pos 27 (uppercase).
+      ;; With case-fold-search=t, "The show" would wrongly match at pos 16.
+      (insert "He went to see the show.  The show was great.")
+
+      (cl-letf (((symbol-function 'url-retrieve)
+                 (lambda (_url callback &optional _cbargs _silent _inhibit)
+                   (let ((resp-buf (flywrite-test--make-response-buffer
+                                    mock-response-json)))
+                     (with-current-buffer resp-buf
+                       (goto-char (point-min))
+                       (funcall callback nil))
+                     resp-buf))))
+
+        (flywrite-mode 1)
+
+        ;; LLM flags "The show" (capitalized) — must NOT match "the show"
+        (let ((inner (json-encode
+                      '((suggestions
+                         . [((quote . "The show")
+                             (reason . "Consider lowercase"))])))))
+          (setq mock-response-json
+                (json-encode
+                 `((choices
+                    . [((message
+                         . ((content . ,inner))))])))))
+
+        (flywrite--after-change 1 (point-max) 0)
+        (flywrite--idle-timer-fn (current-buffer))
+
+        (should (= (length flywrite--diagnostics) 1))
+        (let ((diag (car flywrite--diagnostics)))
+          ;; "The show" starts at position 27, not 16
+          (should (= (flymake-diagnostic-beg diag) 27))
+          (should (= (flymake-diagnostic-end diag) 35))))
+
+      (flywrite-mode -1))))
+
+
 ;;;; ---- System prompt resolution ----
 
 
