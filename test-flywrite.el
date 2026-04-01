@@ -1194,6 +1194,146 @@ Verifies underlined strings, not numeric positions."
       (flywrite-mode -1))))
 
 
+(ert-deftest flywrite-test-e2e-diagnostic-survives-large-insert ()
+  "Diagnostic on paragraph 2 survives a large insertion in paragraph 1.
+The inserted text is longer than the entire original paragraph."
+  (let* ((flywrite-api-url "https://api.openai.com/v1/chat/completions")
+         (flywrite-api-key "sk-fake-test-key")
+         (flywrite-idle-delay 0.1)
+         (flywrite-eager nil)
+         (mock-response-json nil))
+    (with-temp-buffer
+      (text-mode)
+
+      ;; Short paragraph 1, paragraph 2 has "Him"
+      (insert "Hi.\n\nHim went to the store.")
+
+      (cl-letf (((symbol-function 'url-retrieve)
+                 (lambda (_url callback &optional _cbargs _silent _inhibit)
+                   (let ((resp-buf (flywrite-test--make-response-buffer
+                                    mock-response-json)))
+                     (with-current-buffer resp-buf
+                       (goto-char (point-min))
+                       (funcall callback nil))
+                     resp-buf))))
+
+        (flywrite-mode 1)
+
+        ;; Mock response: flag "Him" — only found in paragraph 2
+        (let ((inner (json-encode
+                      '((suggestions
+                         . [((quote . "Him")
+                             (reason
+                              . "Use \"He\" (subject pronoun)"))])))))
+          (setq mock-response-json
+                (json-encode
+                 `((choices
+                    . [((message
+                         . ((content . ,inner))))])))))
+
+        ;; --- Step 1: Check both paragraphs ---
+        (flywrite--after-change 1 (point-max) 0)
+        (flywrite--idle-timer-fn (current-buffer))
+
+        ;; --- Step 2: Verify diagnostic underlines "Him" ---
+        (should (= (length flywrite--diagnostics) 1))
+        (let ((diag (car flywrite--diagnostics)))
+          (should (string= "Him"
+                           (buffer-substring-no-properties
+                            (flymake-diagnostic-beg diag)
+                            (flymake-diagnostic-end diag)))))
+
+        ;; --- Step 3: Insert text much longer than original paragraph ---
+        ;; "Hi." is 3 chars; the replacement is ~60 chars.
+        (goto-char 1)
+        (search-forward "Hi")
+        (replace-match
+         "Hello there, the weather is absolutely wonderful today")
+
+        ;; --- Step 4: Re-check ---
+        (flywrite--idle-timer-fn (current-buffer))
+
+        ;; --- Step 5: Verify diagnostic still underlines "Him" ---
+        (should (= (length flywrite--diagnostics) 1))
+        (let ((diag (car flywrite--diagnostics)))
+          (should (string= "Him"
+                           (buffer-substring-no-properties
+                            (flymake-diagnostic-beg diag)
+                            (flymake-diagnostic-end diag))))))
+
+      (flywrite-mode -1))))
+
+
+(ert-deftest flywrite-test-e2e-diagnostic-survives-large-delete ()
+  "Diagnostic on paragraph 2 survives a large deletion in paragraph 1."
+  (let* ((flywrite-api-url "https://api.openai.com/v1/chat/completions")
+         (flywrite-api-key "sk-fake-test-key")
+         (flywrite-idle-delay 0.1)
+         (flywrite-eager nil)
+         (mock-response-json nil))
+    (with-temp-buffer
+      (text-mode)
+
+      ;; Long paragraph 1 (58 chars), then paragraph 2 with "Him"
+      (insert (concat "The weather is absolutely wonderful and "
+                      "beautiful today.\n\n"
+                      "Him went to the store."))
+
+      (cl-letf (((symbol-function 'url-retrieve)
+                 (lambda (_url callback &optional _cbargs _silent _inhibit)
+                   (let ((resp-buf (flywrite-test--make-response-buffer
+                                    mock-response-json)))
+                     (with-current-buffer resp-buf
+                       (goto-char (point-min))
+                       (funcall callback nil))
+                     resp-buf))))
+
+        (flywrite-mode 1)
+
+        ;; Mock response: flag "Him" — only found in paragraph 2
+        (let ((inner (json-encode
+                      '((suggestions
+                         . [((quote . "Him")
+                             (reason
+                              . "Use \"He\" (subject pronoun)"))])))))
+          (setq mock-response-json
+                (json-encode
+                 `((choices
+                    . [((message
+                         . ((content . ,inner))))])))))
+
+        ;; --- Step 1: Check both paragraphs ---
+        (flywrite--after-change 1 (point-max) 0)
+        (flywrite--idle-timer-fn (current-buffer))
+
+        ;; --- Step 2: Verify diagnostic underlines "Him" ---
+        (should (= (length flywrite--diagnostics) 1))
+        (let ((diag (car flywrite--diagnostics)))
+          (should (string= "Him"
+                           (buffer-substring-no-properties
+                            (flymake-diagnostic-beg diag)
+                            (flymake-diagnostic-end diag)))))
+
+        ;; --- Step 3: Delete most of paragraph 1 ---
+        ;; "absolutely wonderful and beautiful" (34 chars) removed.
+        (goto-char 1)
+        (search-forward "absolutely wonderful and beautiful")
+        (replace-match "fine")
+
+        ;; --- Step 4: Re-check ---
+        (flywrite--idle-timer-fn (current-buffer))
+
+        ;; --- Step 5: Verify diagnostic still underlines "Him" ---
+        (should (= (length flywrite--diagnostics) 1))
+        (let ((diag (car flywrite--diagnostics)))
+          (should (string= "Him"
+                           (buffer-substring-no-properties
+                            (flymake-diagnostic-beg diag)
+                            (flymake-diagnostic-end diag))))))
+
+      (flywrite-mode -1))))
+
+
 ;;;; ---- System prompt resolution ----
 
 
