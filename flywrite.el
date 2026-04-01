@@ -479,22 +479,23 @@ Checks font-lock faces and major mode."
 ;;;; ---- Change detection ----
 
 
-(defun flywrite--adjust-diagnostic-positions (change-end delta)
-  "Shift diagnostic positions after the edit by DELTA characters.
-CHANGE-END is the end of the new text, DELTA the size change.
-Flymake converts marker positions to integers when the backend
-reports, so edits in one paragraph leave diagnostics elsewhere
-with stale positions."
-  (let ((old-end (- change-end delta)))
-    (dolist (diag flywrite--diagnostics)
-      (let ((dbeg (flymake-diagnostic-beg diag))
-            (dend (flymake-diagnostic-end diag)))
-        (when (and dbeg dend)
-          (when (>= dbeg old-end)
-            (setf (flymake--diag-beg diag) (+ dbeg delta)))
-          (when (> dend old-end)
-            (setf (flymake--diag-end diag)
-                  (+ dend delta))))))))
+(defun flywrite--diag-beg (diag)
+  "Return the current start position of DIAG.
+Prefers the flymake overlay position (which auto-adjusts with
+buffer edits) over the struct field (which becomes a stale
+integer after the backend reports)."
+  (let ((ov (flymake--diag-overlay diag)))
+    (if (and ov (overlayp ov) (overlay-buffer ov))
+        (overlay-start ov)
+      (flymake-diagnostic-beg diag))))
+
+(defun flywrite--diag-end (diag)
+  "Return the current end position of DIAG.
+See `flywrite--diag-beg' for rationale."
+  (let ((ov (flymake--diag-overlay diag)))
+    (if (and ov (overlayp ov) (overlay-buffer ov))
+        (overlay-end ov)
+      (flymake-diagnostic-end diag))))
 
 
 (defun flywrite--clear-paragraph-diagnostics (ubeg uend)
@@ -504,13 +505,14 @@ with stale positions."
       (setq flywrite--diagnostics
             (cl-remove-if
              (lambda (diag)
-               (let ((dbeg (flymake-diagnostic-beg diag))
-                     (dend (flymake-diagnostic-end diag)))
+               (let ((dbeg (flywrite--diag-beg diag))
+                     (dend (flywrite--diag-end diag)))
                  (or (not (and dbeg dend))
                      (and (>= dbeg ubeg) (<= dend uend)))))
              flywrite--diagnostics))
       (when (and (/= old-count (length flywrite--diagnostics))
                  flywrite--report-fn)
+        (flywrite--sync-diagnostic-positions)
         (funcall flywrite--report-fn flywrite--diagnostics)))))
 
 
@@ -556,31 +558,23 @@ with stale positions."
                     80 nil nil t))))
 
 
-(defun flywrite--after-change (beg end old-len)
+(defun flywrite--after-change (beg end _len)
   "Hook for `after-change-functions'.  Mark dirty paragraphs.
-BEG and END are the changed region boundaries.  OLD-LEN is the
-length of the replaced text."
+BEG and END are the changed region boundaries."
   (when flywrite-mode
     (condition-case err
-        (progn
-          (let ((delta (- (- end beg) old-len)))
-            (unless (zerop delta)
-              (flywrite--adjust-diagnostic-positions
-               end delta)))
-          (let* ((bounds1 (flywrite--paragraph-bounds-at-pos beg))
-                 (bounds2 (when (and end (> end beg))
-                            (flywrite--paragraph-bounds-at-pos end)))
-                 (paras (if (and bounds2
-                                 (not (equal bounds1 bounds2)))
-                            (list bounds1 bounds2)
-                          (list bounds1))))
-            ;; An edit near a paragraph boundary can dirty two
-            ;; paragraphs.
-            (dolist (bounds paras)
-              (flywrite--process-changed-paragraph
-               (car bounds) (cdr bounds)
-               (flywrite--content-hash
-                (car bounds) (cdr bounds))))))
+        (let* ((bounds1 (flywrite--paragraph-bounds-at-pos beg))
+               (bounds2 (when (and end (> end beg))
+                          (flywrite--paragraph-bounds-at-pos end)))
+               (paras (if (and bounds2 (not (equal bounds1 bounds2)))
+                          (list bounds1 bounds2)
+                        (list bounds1))))
+
+          ;; An edit near a paragraph boundary can dirty two paragraphs.
+          (dolist (bounds paras)
+            (flywrite--process-changed-paragraph
+             (car bounds) (cdr bounds)
+             (flywrite--content-hash (car bounds) (cdr bounds)))))
       (error
        (flywrite--log "Error in after-change: %s buf=%s"
                       (error-message-string err) (buffer-name))))))
@@ -941,8 +935,8 @@ BEG, END, HASH identify the checked region."
         (setq flywrite--diagnostics
               (cl-remove-if
                (lambda (diag)
-                 (and (>= (flymake-diagnostic-beg diag) beg)
-                      (<= (flymake-diagnostic-end diag) end)))
+                 (and (>= (flywrite--diag-beg diag) beg)
+                      (<= (flywrite--diag-end diag) end)))
                flywrite--diagnostics))
 
         ;; Add new diagnostics, tracking per-quote search offsets so
@@ -992,10 +986,23 @@ Returns the match end offset on success, nil otherwise."
       nil)))
 
 
+(defun flywrite--sync-diagnostic-positions ()
+  "Copy overlay positions back into diagnostic structs.
+Flymake overlays auto-adjust when the buffer is edited, but the
+struct beg/end fields become stale integers.  Sync them before
+reporting so flymake recreates overlays at the correct positions."
+  (dolist (diag flywrite--diagnostics)
+    (let ((ov (flymake--diag-overlay diag)))
+      (when (and ov (overlayp ov) (overlay-buffer ov))
+        (setf (flymake--diag-beg diag) (overlay-start ov))
+        (setf (flymake--diag-end diag) (overlay-end ov))))))
+
 (defun flywrite--report-to-flymake (hash)
   "Report `flywrite--diagnostics' to flymake.  HASH is for logging."
   (if flywrite--report-fn
-      (funcall flywrite--report-fn flywrite--diagnostics)
+      (progn
+        (flywrite--sync-diagnostic-positions)
+        (funcall flywrite--report-fn flywrite--diagnostics))
     (flywrite--log "Warning: report-fn nil, diag-fns=%s hash=%s"
                    flymake-diagnostic-functions hash)
     (unless (memq #'flywrite-flymake flymake-diagnostic-functions)
@@ -1185,6 +1192,7 @@ Snapshots and clears the dirty registry, dispatches or queues requests."
 Reports any existing diagnostics immediately so flymake can display them."
   (flywrite--log "flywrite-flymake called by flymake, report-fn set")
   (setq flywrite--report-fn report-fn)
+  (flywrite--sync-diagnostic-positions)
   (funcall report-fn flywrite--diagnostics))
 
 
