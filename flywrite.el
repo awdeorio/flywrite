@@ -492,20 +492,20 @@ Checks font-lock faces and major mode."
 
 (defun flywrite--process-changed-paragraph (ubeg uend hash)
   "Process a single changed paragraph bounded by UBEG..UEND with content HASH."
-  (when flywrite--report-fn
-    (funcall flywrite--report-fn nil :region (cons ubeg uend)))
-  (flywrite--update-region-hash ubeg uend hash)
-
-  ;; Remove stale pending queue entries for this region
-  (setq flywrite--pending-queue
-        (cl-remove-if (lambda (entry)
-                        (and (eq (nth 0 entry) (current-buffer))
-                             (<= (nth 1 entry) uend)
-                             (>= (nth 2 entry) ubeg)))
-                      flywrite--pending-queue))
-
-  ;; Skip if already checked with same hash
+  ;; Content unchanged — preserve existing diagnostics.
   (unless (gethash hash flywrite--checked-paragraphs)
+    (when flywrite--report-fn
+      (funcall flywrite--report-fn nil :region (cons ubeg uend)))
+    (flywrite--update-region-hash ubeg uend hash)
+
+    ;; Remove stale pending queue entries for this region
+    (setq flywrite--pending-queue
+          (cl-remove-if (lambda (entry)
+                          (and (eq (nth 0 entry) (current-buffer))
+                               (<= (nth 1 entry) uend)
+                               (>= (nth 2 entry) ubeg)))
+                        flywrite--pending-queue))
+
     ;; Remove any existing dirty entry for overlapping region
     (setq flywrite--dirty-registry
           (cl-remove-if (lambda (entry)

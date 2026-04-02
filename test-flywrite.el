@@ -2893,4 +2893,84 @@ on the unchanged second sentence."
       (flywrite-mode -1))))
 
 
+;;;; ---- E2E: diagnostics survive paragraph kill and undo ----
+
+
+(ert-deftest flywrite-test-e2e-diagnostic-survives-para-kill-and-undo ()
+  "Diagnostic on paragraph 1 survives killing paragraph 2 and undo.
+Para 1 has an error (\"Him\"), para 2 is clean.  Kill para 2,
+verify diagnostic persists, undo, verify diagnostic persists."
+  (let* ((flywrite-api-url "https://api.openai.com/v1/chat/completions")
+         (flywrite-api-key "sk-fake-test-key")
+         (flywrite-idle-delay 0.1)
+         (flywrite-eager nil)
+         (mock-response-json nil))
+    (with-temp-buffer
+      (text-mode)
+
+      ;; Para 1 has "Him" (error), para 2 is clean.
+      (insert "Him went to the store.\n\nThe weather is nice today.")
+      (let ((para2-text "The weather is nice today."))
+
+        (cl-letf (((symbol-function 'url-retrieve)
+                   (lambda (_url callback &optional _cbargs _silent _inhibit)
+                     (let ((resp-buf (flywrite-test--make-response-buffer
+                                      mock-response-json)))
+                       (with-current-buffer resp-buf
+                         (goto-char (point-min))
+                         (funcall callback nil))
+                       resp-buf))))
+
+          (flywrite-mode 1)
+
+          ;; Mock response: flag "Him"
+          (let ((inner (json-encode
+                        '((suggestions
+                           . [((quote . "Him")
+                               (reason
+                                . "Use \"He\" (subject pronoun)"))])))))
+            (setq mock-response-json
+                  (json-encode
+                   `((choices
+                      . [((message
+                           . ((content . ,inner))))])))))
+
+          ;; --- Step 1: Check all paragraphs ---
+          (flywrite--after-change 1 (point-max) 0)
+          (flywrite--idle-timer-fn (current-buffer))
+
+          ;; --- Step 2: Verify one diagnostic underlining "Him" ---
+          (should (= (length (flymake-diagnostics)) 1))
+          (let ((diag (car (flymake-diagnostics))))
+            (should (string= "Him"
+                             (buffer-substring-no-properties
+                              (flymake-diagnostic-beg diag)
+                              (flymake-diagnostic-end diag)))))
+
+          ;; --- Step 3: Delete paragraph 2 ---
+          (goto-char 1)
+          (search-forward "\n\n")
+          (delete-region (point) (point-max))
+
+          ;; --- Step 4: Re-check; verify diagnostic still present ---
+          (flywrite--idle-timer-fn (current-buffer))
+          (should (= (length (flymake-diagnostics)) 1))
+          (let ((diag (car (flymake-diagnostics))))
+            (should (string= "Him"
+                             (flywrite-test--diag-text-at-overlay diag))))
+
+          ;; --- Step 5: Re-insert paragraph 2 (simulates undo) ---
+          (goto-char (point-max))
+          (insert para2-text)
+
+          ;; --- Step 6: Re-check; verify diagnostic still present ---
+          (flywrite--idle-timer-fn (current-buffer))
+          (should (= (length (flymake-diagnostics)) 1))
+          (let ((diag (car (flymake-diagnostics))))
+            (should (string= "Him"
+                             (flywrite-test--diag-text-at-overlay diag))))))
+
+      (flywrite-mode -1))))
+
+
 ;;; test-flywrite.el ends here
