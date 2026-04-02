@@ -492,8 +492,15 @@ Checks font-lock faces and major mode."
 
 (defun flywrite--process-changed-paragraph (ubeg uend hash)
   "Process a single changed paragraph bounded by UBEG..UEND with content HASH."
-  ;; Content unchanged — preserve existing diagnostics.
-  (unless (gethash hash flywrite--checked-paragraphs)
+  (let ((region-key (format "%d-%d" ubeg uend)))
+    ;; Content unchanged and at the same position — preserve diagnostics.
+    (when (and (gethash hash flywrite--checked-paragraphs)
+               (string= hash
+                        (or (gethash region-key flywrite--region-hashes)
+                            "")))
+      (cl-return-from flywrite--process-changed-paragraph))
+    ;; Paragraph is new or has moved — uncache so dispatch re-checks it.
+    (remhash hash flywrite--checked-paragraphs)
     (when flywrite--report-fn
       (funcall flywrite--report-fn nil :region (cons ubeg uend)))
     (flywrite--update-region-hash ubeg uend hash)
@@ -524,6 +531,18 @@ Checks font-lock faces and major mode."
                     80 nil nil t))))
 
 
+(defun flywrite--paragraph-after-pos (pos)
+  "Return paragraph bounds for the first paragraph after POS, or nil.
+Skips whitespace forward from POS; returns nil if POS is at or past
+the last paragraph."
+  (let ((probe (save-excursion
+                 (goto-char pos)
+                 (skip-chars-forward " \t\n")
+                 (point))))
+    (when (< probe (point-max))
+      (flywrite--paragraph-bounds-at-pos probe))))
+
+
 (defun flywrite--after-change (beg end _len)
   "Hook for `after-change-functions'.  Mark dirty paragraphs.
 BEG and END are the changed region boundaries."
@@ -532,9 +551,15 @@ BEG and END are the changed region boundaries."
         (let* ((bounds1 (flywrite--paragraph-bounds-at-pos beg))
                (bounds2 (when (and end (> end beg))
                           (flywrite--paragraph-bounds-at-pos end)))
-               (paras (if (and bounds2 (not (equal bounds1 bounds2)))
-                          (list bounds1 bounds2)
-                        (list bounds1))))
+               ;; When end lands on a blank-line separator,
+               ;; paragraph-bounds-at-pos resolves back to bounds1.
+               ;; Also probe just past end to catch the next paragraph.
+               (bounds3
+                (when (and (or (not bounds2) (equal bounds1 bounds2))
+                           (< end (point-max)))
+                  (flywrite--paragraph-after-pos end)))
+               (paras (delete-dups
+                       (delq nil (list bounds1 bounds2 bounds3)))))
 
           ;; An edit near a paragraph boundary can dirty two paragraphs.
           (dolist (bounds paras)

@@ -3152,11 +3152,12 @@ Three paragraphs: para 1 has \"Him\", para 2 clean, para 3 has \"Him\"."
                             (flymake-diagnostic-end diag)))))
 
         ;; --- Step 3: Delete middle paragraph (para 2) ---
-        ;; Find start of para 2 and end of para 2 (including blank lines).
+        ;; Delete only para 2's text, preserving the \n\n separators so
+        ;; paras 1 and 3 remain separate paragraphs.
         (goto-char 1)
-        (search-forward "store.")
+        (search-forward "\n\n")
         (let ((del-start (point)))
-          (search-forward "Him ran")
+          (search-forward "\n\n")
           (goto-char (match-beginning 0))
           (delete-region del-start (point)))
 
