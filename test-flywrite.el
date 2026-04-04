@@ -3801,4 +3801,276 @@ Paragraph text is unchanged, so the diagnostic must survive."
       (flywrite-mode -1))))
 
 
+(ert-deftest flywrite-test-e2e-insert-newline-between-paragraphs ()
+  "Inserting a newline in the separator between two paragraphs preserves diag.
+Two paragraphs separated by a blank line.  Paragraph 2 has a diagnostic.
+Widen the separator by inserting another newline.  Diagnostic must survive."
+  (let* ((flywrite-api-url "https://api.openai.com/v1/chat/completions")
+         (flywrite-api-key "sk-fake-test-key")
+         (flywrite-idle-delay 0.1)
+         (flywrite-eager nil)
+         (mock-response-json nil))
+    (with-temp-buffer
+      (text-mode)
+
+      (insert "The weather is nice today.\n\nHim went to the store.")
+
+      (cl-letf (((symbol-function 'url-retrieve)
+                 (lambda (_url callback &optional _cbargs _silent _inhibit)
+                   (let ((resp-buf (flywrite-test--make-response-buffer
+                                    mock-response-json)))
+                     (with-current-buffer resp-buf
+                       (goto-char (point-min))
+                       (funcall callback nil))
+                     resp-buf))))
+
+        (flywrite-mode 1)
+
+        ;; Mock response: flag "Him"
+        (let ((inner (json-encode
+                      '((suggestions
+                         . [((quote . "Him")
+                             (reason
+                              . "Use \"He\" (subject pronoun)"))])))))
+          (setq mock-response-json
+                (json-encode
+                 `((choices
+                    . [((message
+                         . ((content . ,inner))))])))))
+
+        ;; --- Step 1: Check both paragraphs ---
+        (flywrite--after-change 1 (point-max) 0)
+        (flywrite--idle-timer-fn (current-buffer))
+
+        (should (= (length (flymake-diagnostics)) 1))
+        (let ((diag (car (flymake-diagnostics))))
+          (should (string= "Him"
+                           (buffer-substring-no-properties
+                            (flymake-diagnostic-beg diag)
+                            (flymake-diagnostic-end diag)))))
+
+        ;; --- Step 2: Insert newline in separator ---
+        ;; "today.\n\nHim" -> "today.\n\n\nHim"
+        (goto-char 28)
+        (insert "\n")
+
+        ;; --- Step 3: Trigger re-check ---
+        (flywrite--idle-timer-fn (current-buffer))
+
+        ;; --- Step 4: Diagnostic still present on "Him" ---
+        (should (= (length (flymake-diagnostics)) 1))
+        (let ((diag (car (flymake-diagnostics))))
+          (should (string= "Him"
+                           (flywrite-test--diag-text-at-overlay
+                            diag)))))
+
+      (flywrite-mode -1))))
+
+
+(ert-deftest flywrite-test-e2e-insert-newline-before-first-of-two-paragraphs ()
+  "Inserting a newline at buffer start preserves diagnostic on paragraph 1.
+Two paragraphs.  Paragraph 1 has a diagnostic.  Insert newline at
+buffer start.  Diagnostic must survive."
+  (let* ((flywrite-api-url "https://api.openai.com/v1/chat/completions")
+         (flywrite-api-key "sk-fake-test-key")
+         (flywrite-idle-delay 0.1)
+         (flywrite-eager nil)
+         (mock-response-json nil))
+    (with-temp-buffer
+      (text-mode)
+
+      (insert "Him went to the store.\n\nThe weather is nice today.")
+
+      (cl-letf (((symbol-function 'url-retrieve)
+                 (lambda (_url callback &optional _cbargs _silent _inhibit)
+                   (let ((resp-buf (flywrite-test--make-response-buffer
+                                    mock-response-json)))
+                     (with-current-buffer resp-buf
+                       (goto-char (point-min))
+                       (funcall callback nil))
+                     resp-buf))))
+
+        (flywrite-mode 1)
+
+        ;; Mock response: flag "Him"
+        (let ((inner (json-encode
+                      '((suggestions
+                         . [((quote . "Him")
+                             (reason
+                              . "Use \"He\" (subject pronoun)"))])))))
+          (setq mock-response-json
+                (json-encode
+                 `((choices
+                    . [((message
+                         . ((content . ,inner))))])))))
+
+        ;; --- Step 1: Check both paragraphs ---
+        (flywrite--after-change 1 (point-max) 0)
+        (flywrite--idle-timer-fn (current-buffer))
+
+        (should (= (length (flymake-diagnostics)) 1))
+        (let ((diag (car (flymake-diagnostics))))
+          (should (string= "Him"
+                           (buffer-substring-no-properties
+                            (flymake-diagnostic-beg diag)
+                            (flymake-diagnostic-end diag)))))
+
+        ;; --- Step 2: Insert newline at buffer start ---
+        (goto-char 1)
+        (insert "\n")
+
+        ;; --- Step 3: Trigger re-check ---
+        (flywrite--idle-timer-fn (current-buffer))
+
+        ;; --- Step 4: Diagnostic still present on "Him" ---
+        (should (= (length (flymake-diagnostics)) 1))
+        (let ((diag (car (flymake-diagnostics))))
+          (should (string= "Him"
+                           (flywrite-test--diag-text-at-overlay
+                            diag)))))
+
+      (flywrite-mode -1))))
+
+
+(ert-deftest flywrite-test-e2e-insert-newline-after-last-of-two-paragraphs ()
+  "Inserting a newline at buffer end preserves diagnostic on paragraph 2.
+Two paragraphs.  Paragraph 2 has a diagnostic.  Insert newline at
+buffer end.  Diagnostic must survive."
+  (let* ((flywrite-api-url "https://api.openai.com/v1/chat/completions")
+         (flywrite-api-key "sk-fake-test-key")
+         (flywrite-idle-delay 0.1)
+         (flywrite-eager nil)
+         (mock-response-json nil))
+    (with-temp-buffer
+      (text-mode)
+
+      (insert "The weather is nice today.\n\nHim went to the store.")
+
+      (cl-letf (((symbol-function 'url-retrieve)
+                 (lambda (_url callback &optional _cbargs _silent _inhibit)
+                   (let ((resp-buf (flywrite-test--make-response-buffer
+                                    mock-response-json)))
+                     (with-current-buffer resp-buf
+                       (goto-char (point-min))
+                       (funcall callback nil))
+                     resp-buf))))
+
+        (flywrite-mode 1)
+
+        ;; Mock response: flag "Him"
+        (let ((inner (json-encode
+                      '((suggestions
+                         . [((quote . "Him")
+                             (reason
+                              . "Use \"He\" (subject pronoun)"))])))))
+          (setq mock-response-json
+                (json-encode
+                 `((choices
+                    . [((message
+                         . ((content . ,inner))))])))))
+
+        ;; --- Step 1: Check both paragraphs ---
+        (flywrite--after-change 1 (point-max) 0)
+        (flywrite--idle-timer-fn (current-buffer))
+
+        (should (= (length (flymake-diagnostics)) 1))
+        (let ((diag (car (flymake-diagnostics))))
+          (should (string= "Him"
+                           (buffer-substring-no-properties
+                            (flymake-diagnostic-beg diag)
+                            (flymake-diagnostic-end diag)))))
+
+        ;; --- Step 2: Insert newline at buffer end ---
+        (goto-char (point-max))
+        (insert "\n")
+
+        ;; --- Step 3: Trigger re-check ---
+        (flywrite--idle-timer-fn (current-buffer))
+
+        ;; --- Step 4: Diagnostic still present on "Him" ---
+        (should (= (length (flymake-diagnostics)) 1))
+        (let ((diag (car (flymake-diagnostics))))
+          (should (string= "Him"
+                           (flywrite-test--diag-text-at-overlay
+                            diag)))))
+
+      (flywrite-mode -1))))
+
+
+(ert-deftest flywrite-test-e2e-delete-from-separator-other-para-diag ()
+  "Deleting from separator preserves diagnostic on adjacent paragraph.
+Two paragraphs separated by two blank lines.  Paragraph 1 has a
+diagnostic.  Delete one blank line.  Paragraph 1 position is unchanged,
+so its diagnostic must survive without a re-check."
+  (let* ((flywrite-api-url "https://api.openai.com/v1/chat/completions")
+         (flywrite-api-key "sk-fake-test-key")
+         (flywrite-idle-delay 0.1)
+         (flywrite-eager nil)
+         (mock-response-json nil)
+         (api-call-count 0))
+    (with-temp-buffer
+      (text-mode)
+
+      ;; Two paragraphs separated by two blank lines (\n\n\n)
+      (insert "Him went to the store.\n\n\nThe weather is nice today.")
+
+      (cl-letf (((symbol-function 'url-retrieve)
+                 (lambda (_url callback &optional _cbargs _silent _inhibit)
+                   (cl-incf api-call-count)
+                   (let ((resp-buf (flywrite-test--make-response-buffer
+                                    mock-response-json)))
+                     (with-current-buffer resp-buf
+                       (goto-char (point-min))
+                       (funcall callback nil))
+                     resp-buf))))
+
+        (flywrite-mode 1)
+
+        ;; Mock response: flag "Him"
+        (let ((inner (json-encode
+                      '((suggestions
+                         . [((quote . "Him")
+                             (reason
+                              . "Use \"He\" (subject pronoun)"))])))))
+          (setq mock-response-json
+                (json-encode
+                 `((choices
+                    . [((message
+                         . ((content . ,inner))))])))))
+
+        ;; --- Step 1: Check both paragraphs ---
+        (flywrite--after-change 1 (point-max) 0)
+        (flywrite--idle-timer-fn (current-buffer))
+
+        (should (= (length (flymake-diagnostics)) 1))
+        (let ((diag (car (flymake-diagnostics))))
+          (should (string= "Him"
+                           (buffer-substring-no-properties
+                            (flymake-diagnostic-beg diag)
+                            (flymake-diagnostic-end diag)))))
+
+        ;; Record API call count after initial check
+        (let ((calls-after-initial api-call-count))
+
+          ;; --- Step 2: Delete one blank line from separator ---
+          ;; "store.\n\n\nThe" -> "store.\n\nThe"
+          (goto-char 24)                ; middle \n in the separator
+          (delete-char 1)
+
+          ;; --- Step 3: Trigger re-check ---
+          (flywrite--idle-timer-fn (current-buffer))
+
+          ;; --- Step 4: No extra API call (both paras unchanged) ---
+          (should (= api-call-count calls-after-initial))
+
+          ;; --- Step 5: Diagnostic still present on "Him" ---
+          (should (= (length (flymake-diagnostics)) 1))
+          (let ((diag (car (flymake-diagnostics))))
+            (should (string= "Him"
+                             (flywrite-test--diag-text-at-overlay
+                              diag))))))
+
+      (flywrite-mode -1))))
+
+
 ;;; test-flywrite.el ends here
